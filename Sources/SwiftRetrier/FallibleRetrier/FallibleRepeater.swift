@@ -2,19 +2,24 @@ import Foundation
 import Combine
 
 public class FallibleRepeater<Output>: Repeater, FallibleRetrier {
-
+    
     private let retrierBuilder: () -> AnySingleOutputFallibleRetrier<Output>
-
-    private let retrierSubject = PassthroughSubject<AnySingleOutputFallibleRetrier<Output>, Never>()
+    
+    private let repeatDelay: TimeInterval
+    private let retrierSubject = CurrentValueSubject<AnySingleOutputFallibleRetrier<Output>?, Never>(nil)
     private let completionSubject = CurrentValueSubject<Subscribers.Completion<Error>?, Never>(nil)
-    private var task: Task<Void, Error>!
-
+    private var retrierSubscriptions = Set<AnyCancellable>()
+    private var cancelled = false
+    
     public init<R>(repeatDelay: TimeInterval,
                    retrierBuilder: @escaping () -> R) where R: SingleOutputFallibleRetrier, R.Output == Output {
+        self.repeatDelay = repeatDelay
         self.retrierBuilder = { retrierBuilder().eraseToAnySingleOutputFallibleRetrier() }
-        task = createTask(repeatDelay: repeatDelay, retrierBuilder: self.retrierBuilder)
+        onMain { [self] in
+            startRetrier()
+        }
     }
-
+    
     public convenience init(repeatDelay: TimeInterval,
                             policy: FallibleRetryPolicyInstance,
                             job: @escaping Job<Output>) {
@@ -23,7 +28,7 @@ public class FallibleRepeater<Output>: Repeater, FallibleRetrier {
             SimpleRetrier(policy: policy, job: job)
         })
     }
-
+    
     public convenience init<P>(
         repeatDelay: TimeInterval,
         policy: FallibleRetryPolicyInstance,
@@ -35,52 +40,52 @@ public class FallibleRepeater<Output>: Repeater, FallibleRetrier {
             ConditionalFallibleRetrier(policy: policy, conditionPublisher: conditionPublisher, job: job)
         })
     }
-
-    @MainActor
-    private func createRetrier() -> AnySingleOutputFallibleRetrier<Output> {
+    
+    private func startRetrier() {
+        guard !cancelled else { return }
         let retrier = retrierBuilder()
         retrierSubject.send(retrier)
-        return retrier
+        bindFailure(retrier: retrier)
+        bindSuccess(retrier: retrier)
     }
-
-    @MainActor
-    private func send(completion: Subscribers.Completion<Error>) async {
-        sendSync(completion: completion)
+    
+    private func bindFailure(retrier: AnySingleOutputFallibleRetrier<Output>) {
+        retrier.resultPublisher
+            .sink { [unowned self] in
+                if case .failure(let error) = $0 {
+                    send(completion: .failure(error))
+                }
+            }
+            .store(in: &retrierSubscriptions)
     }
-
-    private func sendSync(completion: Subscribers.Completion<Error>) {
+    
+    private func bindSuccess(retrier: AnySingleOutputFallibleRetrier<Output>) {
+        retrier.resultPublisher
+            .compactMap {
+                if case .success = $0 {
+                    return ()
+                }
+                return nil
+            }
+            .delay(for: .init(floatLiteral: repeatDelay), scheduler: DispatchQueue.main)
+        // We retain self here, so that this retrier keeps working even if it's not retained anywhere else
+            .sink { [self] in
+                retrierSubscriptions.removeAll()
+                startRetrier()
+            }
+            .store(in: &retrierSubscriptions)
+    }
+    
+    private func send(completion: Subscribers.Completion<Error>) {
+        retrierSubscriptions.removeAll()
         completionSubject.send(completion)
         completionSubject.send(completion: .finished)
         retrierSubject.send(completion: .finished)
     }
-
-    private func createTask(repeatDelay: TimeInterval,
-                            retrierBuilder: @escaping () -> AnySingleOutputFallibleRetrier<Output>) -> Task<Void, Error> {
-        Task {
-            while true {
-                do {
-                    // Ensure we don't start before any ongoing business on main actor is finished
-                    await MainActor.run {}
-                    if Task.isCancelled {
-                        break
-                    }
-                    let retrier = await createRetrier()
-                    _ = try await retrier.cancellableValue
-                    if Task.isCancelled {
-                        break
-                    }
-                    try? await Task.sleep(nanoseconds: nanoseconds(repeatDelay))
-                } catch {
-                    await send(completion: .failure(error))
-                    return
-                }
-            }
-            await send(completion: .finished)
-        }
-    }
-
+    
     public var attemptPublisher: AnyPublisher<Result<Output, Error>, Error> {
         let result: AnyPublisher<Result<Output, Error>, Error> = retrierSubject
+            .compactMap { $0 }
             .combineLatest(completionSubject)
             .map { retrier, completion in
                 if let completion {
@@ -102,11 +107,12 @@ public class FallibleRepeater<Output>: Repeater, FallibleRetrier {
             .eraseToAnyPublisher()
         return result
     }
-
+    
     public func cancel() {
         onMain { [self] in
-            task?.cancel()
-            sendSync(completion: .finished)
+            cancelled = true
+            send(completion: .finished)
+            retrierSubject.value?.cancel()
         }
     }
 }

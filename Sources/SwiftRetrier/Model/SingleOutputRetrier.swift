@@ -16,3 +16,22 @@ public extension SingleOutputRetrier {
         }
     }
 }
+
+extension SingleOutputRetrier {
+
+    var resultPublisher: AnyPublisher<Result<Output, Failure>, Never> {
+        attemptPublisher
+            .compactMap {
+                switch $0 {
+                case .failure:
+                    return nil
+                case .success(let value):
+                    return .success(value)
+                }
+            }
+            .catch {
+                Just(.failure($0))
+            }
+            .eraseToAnyPublisher()
+    }
+}
