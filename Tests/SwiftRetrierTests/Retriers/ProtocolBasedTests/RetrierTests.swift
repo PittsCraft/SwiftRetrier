@@ -117,6 +117,30 @@ class RetrierTests<R: Retrier>: XCTestCase {
         cancellable.cancel()
     }
 
+    @MainActor
+    func test_deallocated_some_time_after_cancellation() async throws {
+        weak var retrier = retrier(failureJob)
+        retrier?.cancel()
+        try await Task.sleep(nanoseconds: nanoseconds(0.1))
+        XCTAssertNil(retrier)
+    }
+
+    @MainActor
+    func test_still_trying_while_not_finished_and_not_retained() async throws {
+        var shouldSignalExecution = false
+        var executed = false
+        retrier {
+            if shouldSignalExecution {
+                executed = true
+            }
+            throw NSError()
+        }
+        try await Task.sleep(nanoseconds: nanoseconds(0.1))
+        shouldSignalExecution = true
+        try await Task.sleep(nanoseconds: nanoseconds(0.1))
+        XCTAssertTrue(executed)
+    }
+
     override class var defaultTestSuite: XCTestSuite {
         if self == RetrierTests.self {
             return XCTestSuite(name: "Empty suite")

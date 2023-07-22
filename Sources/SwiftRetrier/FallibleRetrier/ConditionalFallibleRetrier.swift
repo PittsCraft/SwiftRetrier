@@ -3,18 +3,14 @@ import Combine
 
 public class ConditionalFallibleRetrier<Output>: SingleOutputFallibleRetrier, SingleOutputConditionalRetrier {
 
-    private let retrierSubject = PassthroughSubject<SimpleRetrier<Output>, Never>()
     private let policy: FallibleRetryPolicyInstance
     private let job: Job<Output>
 
+    private var retrier: SimpleRetrier<Output>?
+    private var successValue: Output?
     private var conditionSubscription: AnyCancellable?
+    private var retrierSubscription: AnyCancellable?
     private let conditionPublisher: AnyPublisher<Bool, Never>
-    private var retrierTask: Task<Void, Error>?
-    private var validTaskUuid: UUID?
-    private var mainTask: Task<Output, Error>!
-    private var continuation: UnsafeContinuation<Output, Error>?
-    private var retriersSubscription: AnyCancellable?
-    private var cancelled = false
 
     private let subject = PassthroughSubject<Result<Output, Error>, Error>()
 
@@ -24,122 +20,87 @@ public class ConditionalFallibleRetrier<Output>: SingleOutputFallibleRetrier, Si
         self.policy = policy
         self.job = job
         self.conditionPublisher = conditionPublisher.onMain()
-        bindPublishers()
-        self.mainTask = createMainTask()
+        bindCondition()
     }
 
-    private func bindPublishers() {
-        retriersSubscription = retrierSubject
-            .combineLatest(conditionPublisher) { (retrier: SimpleRetrier<Output>, condition: Bool) -> AnyPublisher<Result<Output, Error>, Never> in
-                if condition {
-                    return retrier.attemptPublisher.neverComplete()
-                }
-                return Empty(completeImmediately: false).eraseToAnyPublisher()
-            }
-            .switchToLatest()
-            .sink { [unowned self] in
-                subject.send($0)
-            }
-    }
-
-    private func createMainTask() -> Task<Output, Error> {
-        Task {
-            try await withUnsafeThrowingContinuation { continuation in
-                DispatchQueue.main.async { [self] in
-                    self.continuation = continuation
-                    guard !cancelled else {
-                        handleCompletion(result: .failure(CancellationError()), uuid: nil)
-                        return
-                    }
-                    scheduleRetrierTask()
-                }
-            }
-        }
-    }
-
-    private func scheduleRetrierTask() {
+    private func bindCondition() {
         var lastCondition: Bool?
         conditionSubscription = conditionPublisher
             .removeDuplicates()
             .sink(
+                // We retain self here, so that this retrier keeps working even if it's not retained anywhere else
                 receiveCompletion: { [self] completion in
                     if lastCondition != true {
                         // The task will never be executed anymore and continuation will never be called with a relevant
                         // output.
-                        handleCompletion(result: .failure(RetryError.conditionPublisherCompleted), uuid: nil)
+                        subject.send(completion: .failure(RetryError.conditionPublisherCompleted))
                     }
                 },
-                receiveValue:{ [self] condition in
+                receiveValue:{ [unowned self] condition in
                     lastCondition = condition
                     if condition {
-                        let uuid = UUID()
-                        validTaskUuid = uuid
-                        retrierTask = createRetrierTask(previousTask: retrierTask, uuid: uuid)
+                        startRetrier()
                     } else {
-                        validTaskUuid = nil
-                        retrierTask?.cancel()
-                        if retrierTask != nil {
-                            // When a task was running, its output is inhibited by the condition
-                            // in `bindPublishers`, thus we have to signal its cancellation this way
-                            subject.send(.failure(CancellationError()))
-                        }
+                        stopRetrier()
                     }
                 }
             )
     }
 
-    private func createRetrierTask(previousTask: Task<Void, Error>?, uuid: UUID) -> Task<Void, Error> {
-        Task {
-            do {
-                let retrier = await createRetrier()
-                try Task.checkCancellation()
-                let result = try await retrier.cancellableValue
-                try Task.checkCancellation()
-                await handleCompletion(result: .success(result), uuid: uuid)
-            } catch {
-                await handleCompletion(result: .failure(error), uuid: uuid)
-                throw error
-            }
-        }
-    }
-
-    @MainActor
-    private func createRetrier() -> SimpleRetrier<Output> {
+    private func startRetrier() {
         let retrier = SimpleRetrier(policy: policy, job: job)
-        retrierSubject.send(retrier)
-        return retrier
+        self.retrier = retrier
+        bind(retrier: retrier)
     }
 
-    private func handleCompletion(result: Result<Output, Error>, uuid: UUID?) {
-        guard uuid == nil || uuid == validTaskUuid else { return }
-        defer {
-            self.continuation = nil
-        }
-        conditionSubscription?.cancel()
-        guard !cancelled else {
-            subject.send(completion: .finished)
-            continuation?.resume(throwing: CancellationError())
-            return
-        }
-        switch result {
-        case .success(let output):
-            subject.send(completion: .finished)
-            continuation?.resume(with: .success(output))
-        case .failure(let failure):
-            subject.send(completion: .failure(failure))
-            continuation?.resume(throwing: failure)
-        }
+    private func stopRetrier() {
+        guard let retrier else { return }
+        retrierSubscription?.cancel()
+        retrier.cancel()
+        self.retrier = nil
+        subject.send(.failure(CancellationError()))
     }
 
-    private func handleCompletion(result: Result<Output, Error>, uuid: UUID?) async {
-        await MainActor.run {
-            handleCompletion(result: result, uuid: uuid)
-        }
+    private func bind(retrier: SimpleRetrier<Output>) {
+        retrierSubscription = retrier.attemptPublisher
+            .sink(receiveCompletion: { [unowned self] in
+                subject.send(completion: $0)
+                conditionSubscription?.cancel()
+            }, receiveValue: { [unowned self] in
+                subject.send($0)
+                if case .success(let value) = $0 {
+                    successValue = value
+                }
+            })
     }
 
     public var value: Output {
         get async throws {
-            try await mainTask.value
+            try await withUnsafeThrowingContinuation { continuation in
+                onMain { [self] in
+                    if case .some(let value) = successValue {
+                        continuation.resume(returning: value)
+                        return
+                    }
+                    var subscription: AnyCancellable?
+                    subscription = subject
+                        .sink(receiveCompletion: {
+                            switch $0 {
+                            case .failure(let error):
+                                continuation.resume(throwing: error)
+                                subscription?.cancel()
+                            case .finished:
+                                continuation.resume(throwing: CancellationError())
+                                subscription?.cancel()
+                            }
+                        }, receiveValue: {
+                            if case .success(let value) = $0 {
+                                continuation.resume(returning: value)
+                                subscription?.cancel()
+                            }
+                        })
+                }
+            }
         }
     }
 
@@ -148,11 +109,9 @@ public class ConditionalFallibleRetrier<Output>: SingleOutputFallibleRetrier, Si
     }
 
     public func cancel() {
-        onMain { [self] in
-            cancelled = true
-            mainTask.cancel()
-            retrierTask?.cancel()
-            handleCompletion(result: .failure(CancellationError()), uuid: nil)
-        }
+        retrierSubscription?.cancel()
+        conditionSubscription?.cancel()
+        retrier?.cancel()
+        subject.send(completion: .finished)
     }
 }

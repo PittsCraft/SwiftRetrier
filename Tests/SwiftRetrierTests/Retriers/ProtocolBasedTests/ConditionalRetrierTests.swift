@@ -60,7 +60,7 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
             .eraseToAnyPublisher()
     }
 
-    func test_receive_attempt_error_when_trial_cancelled_by_subscription() {
+    func test_receive_attempt_error_when_trial_cancelled_by_condition() {
         let job = {
             try await Task.sleep(nanoseconds: nanoseconds(0.1))
         }

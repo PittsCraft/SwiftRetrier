@@ -82,7 +82,6 @@ class FallibleRetrierTests<R: FallibleRetrier>: XCTestCase {
             retrier.cancel()
         }
         wait(for: [cancellationExpectation], timeout: 0.2)
-
     }
     
     func test_failure_on_policy_give_up() {
@@ -97,6 +96,13 @@ class FallibleRetrierTests<R: FallibleRetrier>: XCTestCase {
             }, receiveValue: { _ in })
         waitForExpectations(timeout: 0.3)
         cancellable.cancel()
+    }
+
+    @MainActor
+    func test_deallocated_some_time_after_failure() async throws {
+        weak var retrier = retrier(.constantBackoff(maxAttempts: 1), failureJob)
+        try await Task.sleep(nanoseconds: nanoseconds(0.1))
+        XCTAssertNil(retrier)
     }
     
     override class var defaultTestSuite: XCTestSuite {

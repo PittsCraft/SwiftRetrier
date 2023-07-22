@@ -107,6 +107,26 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         await fulfillment(of: [expectation], timeout: 0.2)
     }
 
+    @MainActor
+    func test_value_await_resolves_when_already_succeeded() async throws {
+        let retrier = buildRetrier(successJob)
+        // Let the retrier finish
+        try await Task.sleep(nanoseconds: nanoseconds(0.1))
+        let expectation = expectation(description: "Value await resolved")
+        Task {
+            _ = try await retrier.value
+            expectation.fulfill()
+        }
+        await fulfillment(of: [expectation], timeout: 0.1)
+    }
+
+    @MainActor
+    func test_deallocated_some_time_after_success() async throws {
+        weak var retrier = retrier(successJob)
+        try await Task.sleep(nanoseconds: nanoseconds(0.1))
+        XCTAssertNil(retrier)
+    }
+
     override class var defaultTestSuite: XCTestSuite {
         if self == SingleOutputRetrierTests.self {
             return XCTestSuite(name: "Empty suite")

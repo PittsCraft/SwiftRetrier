@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-public protocol Retrier: Cancellable {
+public protocol Retrier: Cancellable, AnyObject {
     associatedtype Output
     associatedtype Failure: Error
 
