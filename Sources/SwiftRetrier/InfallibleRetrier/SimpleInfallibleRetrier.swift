@@ -36,6 +36,7 @@ public class SimpleInfallibleRetrier<Output>: SingleOutputInfallibleRetrier {
     private func createTask(job: @escaping Job<Output>) -> Task<Output, Error> {
         Task {
             var attemptIndex: UInt = 0
+            await MainActor.run {}
             while true {
                 do {
                     try Task.checkCancellation()

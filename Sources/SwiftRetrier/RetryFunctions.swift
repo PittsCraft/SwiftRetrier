@@ -66,7 +66,7 @@ public func fallibleRetry<Value>(
     if propagateSubscriptionCancellation {
         return repeater
             .attemptSuccessPublisher
-            .handleEvents(receiveCancel: { [weak repeater] in repeater?.cancel() })
+            .handleEvents(receiveCancel: { [repeater] in repeater.cancel() })
             .eraseToAnyPublisher()
     } else {
         return repeater
@@ -88,7 +88,7 @@ public func fallibleRetry<Value, P: Publisher<Bool, Never>>(
     if propagateSubscriptionCancellation {
         return repeater
             .attemptSuccessPublisher
-            .handleEvents(receiveCancel: { [weak repeater] in repeater?.cancel() })
+            .handleEvents(receiveCancel: { [repeater] in repeater.cancel() })
             .eraseToAnyPublisher()
     } else {
         return repeater
@@ -129,7 +129,7 @@ public func retry<Value>(
     if propagateSubscriptionCancellation {
         return repeater
             .attemptSuccessPublisher
-            .handleEvents(receiveCancel: { [weak repeater] in repeater?.cancel() })
+            .handleEvents(receiveCancel: { [repeater] in repeater.cancel() })
             .eraseToAnyPublisher()
     } else {
         return repeater
@@ -151,7 +151,7 @@ public func retry<Value, P: Publisher<Bool, Never>>(
     if propagateSubscriptionCancellation {
         return repeater
             .attemptSuccessPublisher
-            .handleEvents(receiveCancel: { [weak repeater] in repeater?.cancel() })
+            .handleEvents(receiveCancel: { [repeater] in repeater.cancel() })
             .eraseToAnyPublisher()
     } else {
         return repeater

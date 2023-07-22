@@ -2,7 +2,7 @@
 
 Rock-solid, concise and thorough library to retry and repeat `async throws` jobs.
 
-## Use
+## Use with shortcut functions
 
 ```swift
 func fetchSomething() async throws -> Something {
@@ -95,6 +95,9 @@ var cancellableValue: Output { get async throws }
 ```
 
 When a task awaiting on `cancellableValue` is cancelled, the retrier is cancelled. This is not the case for `value`.
+
+You can also use the classes initializers directly, namely `SimpleInfallibleRetrier`, `ConditionalInfallibleRetrier`,
+ `InfallibleRepeater`, `SimpleFallibleRetrier`, `ConditionalFallibleRetrier` and `InfallibleRepeater`.
 
 ## Retriers contract
 

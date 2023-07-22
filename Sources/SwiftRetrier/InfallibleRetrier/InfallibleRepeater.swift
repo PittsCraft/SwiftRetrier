@@ -3,16 +3,15 @@ import Combine
 
 public class InfallibleRepeater<Output>: Repeater, InfallibleRetrier, Cancellable {
 
-    private let retrierBuilder: () -> AnySingleOutputInfallibleRetrier<Output>
-
-    private let retrierSubject = PassthroughSubject<AnySingleOutputInfallibleRetrier<Output>, Never>()
-    private let completionSubject = CurrentValueSubject<Bool, Never>(false)
-    private var task: Task<Void, Never>!
+    private let innerRepeater: FallibleRepeater<Output>
+    private var subscription: AnyCancellable?
 
     public init<R>(repeatDelay: TimeInterval,
                    retrierBuilder: @escaping () -> R) where R: SingleOutputInfallibleRetrier, R.Output == Output {
-        self.retrierBuilder = { retrierBuilder().eraseToAnySingleOutputInfallibleRetrier() }
-        task = createTask(repeatDelay: repeatDelay, retrierBuilder: self.retrierBuilder)
+        innerRepeater = FallibleRepeater(repeatDelay: repeatDelay, retrierBuilder: {
+            let retrier = retrierBuilder().eraseToAnySingleOutputInfallibleRetrier()
+            return InfallibleToFallibleSingleOutputRetrier(retrier: retrier)
+        })
     }
 
     public convenience init(repeatDelay: TimeInterval,
@@ -36,73 +35,14 @@ public class InfallibleRepeater<Output>: Repeater, InfallibleRetrier, Cancellabl
         })
     }
 
-    @MainActor
-    private func createRetrier() -> AnySingleOutputInfallibleRetrier<Output> {
-        let retrier = retrierBuilder()
-        retrierSubject.send(retrier)
-        return retrier
-    }
-
-    @MainActor
-    private func finish() async {
-        finishSync()
-    }
-
-    private func finishSync() {
-        retrierSubject.send(completion: .finished)
-        completionSubject.send(true)
-        completionSubject.send(completion: .finished)
-    }
-
-    private func createTask(
-        repeatDelay: TimeInterval,
-        retrierBuilder: @escaping () -> AnySingleOutputInfallibleRetrier<Output>
-    ) -> Task<Void, Never> {
-        Task {
-            while true {
-                // Ensure we don't start before any ongoing business on main actor is finished
-                await MainActor.run {}
-                if task.isCancelled {
-                    break
-                }
-                let retrier = await createRetrier()
-                do {
-                    _ = try await retrier.value
-                } catch {
-                    break
-                }
-                if task.isCancelled {
-                    break
-                }
-                do {
-                    try await Task.sleep(nanoseconds: nanoseconds(repeatDelay))
-                } catch {}
-            }
-            await finish()
-        }
-    }
-
     public var attemptPublisher: AnyPublisher<Result<Output, Error>, Never> {
-        retrierSubject
-            .combineLatest(completionSubject)
-            .map { retrier, completed in
-                if completed {
-                    return Empty<Result<Output, Error>, Never>()
-                        .eraseToAnyPublisher()
-                } else {
-                    return retrier
-                        .attemptPublisher
-                        .eraseToAnyPublisher()
-                }
-            }
-            .switchToLatest()
+        innerRepeater
+            .attemptPublisher
+            .catch { _ in Empty() }
             .eraseToAnyPublisher()
     }
 
     public func cancel() {
-        onMain { [self] in
-            task.cancel()
-            finishSync()
-        }
+        innerRepeater.cancel()
     }
 }

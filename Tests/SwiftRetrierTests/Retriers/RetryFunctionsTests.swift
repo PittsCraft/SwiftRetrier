@@ -38,7 +38,9 @@ class RetryFunctionsTests: XCTestCase {
                   propagateSubscriptionCancellation: true,
                   with: .constantBackoff(delay: 0.1),
                   job: {
-            XCTFail("Job should not be called")
+            DispatchQueue.main.sync {
+                XCTFail("Job should not be called")
+            }
         })
         .sink(receiveCompletion: { _ in }, receiveValue: { _ in })
         _ = XCTWaiter.wait(for: [expectation(description: "Wait for some time")], timeout: 0.15)

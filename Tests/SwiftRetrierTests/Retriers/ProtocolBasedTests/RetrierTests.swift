@@ -129,7 +129,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
     func test_still_trying_while_not_finished_and_not_retained() async throws {
         var shouldSignalExecution = false
         var executed = false
-        retrier {
+        weak var retrier = retrier {
             if shouldSignalExecution {
                 executed = true
             }
@@ -137,8 +137,9 @@ class RetrierTests<R: Retrier>: XCTestCase {
         }
         try await Task.sleep(nanoseconds: nanoseconds(0.1))
         shouldSignalExecution = true
-        try await Task.sleep(nanoseconds: nanoseconds(0.1))
+        try await Task.sleep(nanoseconds: nanoseconds(0.2))
         XCTAssertTrue(executed)
+        retrier?.cancel()
     }
 
     override class var defaultTestSuite: XCTestSuite {
