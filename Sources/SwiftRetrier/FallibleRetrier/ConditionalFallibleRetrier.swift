@@ -109,9 +109,11 @@ public class ConditionalFallibleRetrier<Output>: SingleOutputFallibleRetrier, Si
     }
 
     public func cancel() {
-        retrierSubscription?.cancel()
-        conditionSubscription?.cancel()
-        retrier?.cancel()
-        subject.send(completion: .finished)
+        onMain { [self] in
+            retrierSubscription?.cancel()
+            conditionSubscription?.cancel()
+            retrier?.cancel()
+            subject.send(completion: .finished)
+        }
     }
 }
