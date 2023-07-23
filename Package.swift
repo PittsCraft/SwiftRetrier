@@ -21,7 +21,7 @@ let package = Package(
     products: [
         .library(
             name: "SwiftRetrier",
-            targets: ["SwiftRetrier"]),
+            targets: ["SwiftRetrier"])
     ],
     dependencies: dependencies,
     targets: [
@@ -34,6 +34,6 @@ let package = Package(
             name: "SwiftRetrierTests",
             dependencies: ["SwiftRetrier"],
             plugins: plugins
-        ),
+        )
     ]
 )

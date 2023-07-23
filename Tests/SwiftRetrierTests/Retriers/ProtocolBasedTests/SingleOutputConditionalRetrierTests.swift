@@ -2,13 +2,12 @@ import XCTest
 @testable import SwiftRetrier
 import Combine
 
-
 class SingleOutputConditionalRetrierTests<R: SingleOutputConditionalRetrier>: XCTestCase {
 
     var retrier: ((AnyPublisher<Bool, Never>, Job<Void>) -> R)!
 
     let successJob: Job<Void> = {}
-    let failureJob: Job<Void> = { throw NSError() }
+    let failureJob: Job<Void> = { throw nsError }
 
     private var instance: R?
 

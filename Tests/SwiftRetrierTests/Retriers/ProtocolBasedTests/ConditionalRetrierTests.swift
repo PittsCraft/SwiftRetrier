@@ -2,13 +2,12 @@ import XCTest
 @testable import SwiftRetrier
 import Combine
 
-
 class ConditionalRetrierTests<R: Retrier>: XCTestCase {
 
     var retrier: ((AnyPublisher<Bool, Never>, @escaping Job<Void>) -> R)!
 
     let successJob: Job<Void> = {}
-    let failureJob: Job<Void> = { throw NSError() }
+    let failureJob: Job<Void> = { throw nsError }
 
     private var instance: R?
 
@@ -28,8 +27,9 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
     func test_no_execution_when_no_condition() async throws {
         let condition = Empty<Bool, Never>(completeImmediately: false)
             .eraseToAnyPublisher()
-        _ = buildRetrier(condition,
-                    { XCTFail("Job shouldn't be executed when no condition value is emitted")})
+        _ = buildRetrier(condition, {
+            XCTFail("Job shouldn't be executed when no condition value is emitted")
+        })
         try await Task.sleep(nanoseconds: nanoseconds(0.05))
     }
 

@@ -2,6 +2,7 @@ import Foundation
 import XCTest
 @testable import SwiftRetrier
 
+// swiftlint:disable type_name
 class FallibleRepeater_RetrierTests: RetrierTests<FallibleRepeater<Void>> {
     override func setUp() {
         self.retrier = {
@@ -25,3 +26,4 @@ class FallibleRepeater_RepeaterTests: RepeaterTests<FallibleRepeater<Void>> {
         }
     }
 }
+// swiftlint:enable type_name

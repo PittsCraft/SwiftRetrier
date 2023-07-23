@@ -2,6 +2,7 @@ import XCTest
 @testable import SwiftRetrier
 import Combine
 
+// swiftlint:disable type_name
 class ConditionalInfallibleRetrier_RetrierTests: RetrierTests<ConditionalInfallibleRetrier<Void>> {
     override func setUp() {
         self.retrier = {
@@ -10,8 +11,8 @@ class ConditionalInfallibleRetrier_RetrierTests: RetrierTests<ConditionalInfalli
     }
 }
 
-
-class ConditionalInfallibleRetrier_SingleOutputRetrierTests: SingleOutputRetrierTests<ConditionalInfallibleRetrier<Void>> {
+class ConditionalInfallibleRetrier_SingleOutputRetrierTests:
+    SingleOutputRetrierTests<ConditionalInfallibleRetrier<Void>> {
     override func setUp() {
         retrier = {
             ConditionalInfallibleRetrier(policy: .constantBackoff(delay: 0.1), conditionPublisher: Just(true), job: $0)
@@ -19,10 +20,12 @@ class ConditionalInfallibleRetrier_SingleOutputRetrierTests: SingleOutputRetrier
     }
 }
 
-class ConditionalInfallibleRetrier_ConditionalRetrierTests: ConditionalRetrierTests<ConditionalInfallibleRetrier<Void>> {
+class ConditionalInfallibleRetrier_ConditionalRetrierTests:
+    ConditionalRetrierTests<ConditionalInfallibleRetrier<Void>> {
     override func setUp() {
         retrier = {
             ConditionalInfallibleRetrier(policy: .constantBackoff(delay: 0.1), conditionPublisher: $0, job: $1)
         }
     }
 }
+// swiftlint:enable type_name

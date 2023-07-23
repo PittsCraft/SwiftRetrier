@@ -6,7 +6,7 @@ class SingleOutputFallibleRetrierTests<R: SingleOutputFallibleRetrier>: XCTestCa
     var retrier: ((FallibleRetryPolicyInstance, @escaping Job<Void>) -> R)!
 
     let successJob: Job<Void> = {}
-    let failureJob: Job<Void> = { throw NSError() }
+    let failureJob: Job<Void> = { throw nsError }
 
     private var instance: R?
 
@@ -51,7 +51,7 @@ class SingleOutputFallibleRetrierTests<R: SingleOutputFallibleRetrier>: XCTestCa
         let cancellable = retrier
             .attemptFailurePublisher
             .sink(receiveCompletion: { _ in },
-                  receiveValue: { result in
+                  receiveValue: { _ in
                 expectation.fulfill()
             })
         waitForExpectations(timeout: 0.1)

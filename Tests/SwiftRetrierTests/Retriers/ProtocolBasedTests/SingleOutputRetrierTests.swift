@@ -6,7 +6,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
     var retrier: ((@escaping Job<Void>) -> R)!
 
     let successJob: Job<Void> = {}
-    let failureJob: Job<Void> = { throw NSError() }
+    let failureJob: Job<Void> = { throw nsError }
 
     private var instance: R?
 
@@ -55,7 +55,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         let retrier = buildRetrier({
             if !calledOnce {
                 calledOnce = true
-                throw NSError()
+                throw nsError
             }
         })
         let expectation = expectation(description: "Completes")
@@ -74,7 +74,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         let retrier = buildRetrier({
             if !calledOnce {
                 calledOnce = true
-                throw NSError()
+                throw nsError
             }
         })
         let expectation = expectation(description: "Got async value")

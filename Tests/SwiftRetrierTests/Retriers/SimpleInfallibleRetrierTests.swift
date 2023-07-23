@@ -2,6 +2,7 @@ import Foundation
 import XCTest
 @testable import SwiftRetrier
 
+// swiftlint:disable type_name
 class SimpleInfallibleRetrier_RetrierTests: RetrierTests<SimpleInfallibleRetrier<Void>> {
     override func setUp() {
         retrier = {
@@ -17,3 +18,4 @@ class SimpleInfallibleRetrier_SingleOutputRetrierTests: SingleOutputRetrierTests
         }
     }
 }
+// swiftlint:enable type_name

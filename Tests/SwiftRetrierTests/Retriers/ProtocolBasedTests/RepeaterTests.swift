@@ -6,7 +6,7 @@ class RepeaterTests<R: Repeater>: XCTestCase {
     var retrier: ((TimeInterval, @escaping Job<Void>) -> R)!
 
     private let successJob: () -> Void = {}
-    private let failureJob: () throws -> Void = { throw NSError() }
+    private let failureJob: () throws -> Void = { throw nsError }
 
     private var instance: R?
 

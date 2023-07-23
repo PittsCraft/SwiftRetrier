@@ -7,7 +7,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
     var retrier: ((@escaping Job<Void>) -> R)!
 
     private let successJob: () -> Void = {}
-    private let failureJob: () throws -> Void = { throw NSError() }
+    private let failureJob: () throws -> Void = { throw nsError }
 
     private var instance: R?
 
@@ -57,7 +57,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         let retrier = buildRetrier({
             if !calledOnce {
                 calledOnce = true
-                throw NSError()
+                throw nsError
             }
         })
         let successExpectation = expectation(description: "Success received")
@@ -133,7 +133,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
             if shouldSignalExecution {
                 executed = true
             }
-            throw NSError()
+            throw nsError
         }
         try await Task.sleep(nanoseconds: nanoseconds(0.1))
         shouldSignalExecution = true

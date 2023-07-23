@@ -3,26 +3,26 @@ import XCTest
 @testable import SwiftRetrier
 
 class FallibleRetrierTests<R: FallibleRetrier>: XCTestCase {
-    
+
     var retrier: ((FallibleRetryPolicyInstance, @escaping Job<Void>) -> R)!
-    
+
     private let successJob: () -> Void = {}
-    private let failureJob: () throws -> Void = { throw NSError() }
-    
+    private let failureJob: () throws -> Void = { throw nsError }
+
     private var instance: R?
-    
+
     func buildRetrier(_ policy: FallibleRetryPolicyInstance, _ job: @escaping Job<Void>) -> R {
         let retrier = retrier(policy, job)
         instance = retrier
         return retrier
     }
-    
+
     override func tearDown() {
         instance?.cancel()
         instance = nil
         super.tearDown()
     }
-    
+
     func test_publisher_trial_failure_received() {
         let retrier = buildRetrier(.constantBackoff(maxAttempts: 1), failureJob)
         let expectation = expectation(description: "Failure received")
@@ -36,7 +36,7 @@ class FallibleRetrierTests<R: FallibleRetrier>: XCTestCase {
         waitForExpectations(timeout: 0.1)
         cancellable.cancel()
     }
-    
+
     func test_successPublisher_trial_failure_received() {
         let retrier = buildRetrier(.constantBackoff(maxAttempts: 1), failureJob)
         let expectation = expectation(description: "Failure received")
@@ -50,7 +50,7 @@ class FallibleRetrierTests<R: FallibleRetrier>: XCTestCase {
         waitForExpectations(timeout: 0.1)
         cancellable.cancel()
     }
-    
+
     func test_failurePublisher_trial_failure_received() {
         let retrier = buildRetrier(.constantBackoff(maxAttempts: 1), failureJob)
         let expectation = expectation(description: "Failure received")
@@ -64,7 +64,7 @@ class FallibleRetrierTests<R: FallibleRetrier>: XCTestCase {
         waitForExpectations(timeout: 0.1)
         cancellable.cancel()
     }
-    
+
     func test_cancellation_propagated_to_job() {
         let cancellationExpectation = expectation(description: "Cancellation catched")
         var fulfilled = false
@@ -83,7 +83,7 @@ class FallibleRetrierTests<R: FallibleRetrier>: XCTestCase {
         }
         wait(for: [cancellationExpectation], timeout: 0.2)
     }
-    
+
     func test_failure_on_policy_give_up() {
         let retrier = buildRetrier(.constantBackoff(maxAttempts: 1),
                                    failureJob)
@@ -104,7 +104,7 @@ class FallibleRetrierTests<R: FallibleRetrier>: XCTestCase {
         try await Task.sleep(nanoseconds: nanoseconds(0.1))
         XCTAssertNil(retrier)
     }
-    
+
     override class var defaultTestSuite: XCTestSuite {
         if self == FallibleRetrierTests.self {
             return XCTestSuite(name: "Empty suite")
