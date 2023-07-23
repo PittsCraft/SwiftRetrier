@@ -1,6 +1,6 @@
 # SwiftRetrier
 
-Rock-solid, concise and thorough library to retry and repeat `async throws` jobs.
+🪨 Rock-solid, concise and thorough library to retry and repeat `async throws` jobs.
 
 ## Use with shortcut functions
 
@@ -126,10 +126,10 @@ When repeating, the policy is reused from start after each success.
 ### Built-in retry policies
 
 ```swift
-retry(policy: .exponentialBackoff(), job: job)
-retry(policy: .constantBackoff(), job: job)
-retry(policy: .immediate(), job: job)
-retry(policy: .custom(homeMadePolicy), job: job)
+retry(with: .exponentialBackoff(), job: job)
+retry(with: .constantBackoff(), job: job)
+retry(with: .immediate(), job: job)
+retry(with: .custom(homeMadePolicy), job: job)
 ```
 
 **Exponential backoff** policy is implemented according to state of the art algorithms.
