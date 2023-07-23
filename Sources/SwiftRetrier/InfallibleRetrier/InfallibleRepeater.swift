@@ -1,6 +1,27 @@
 import Foundation
 import Combine
 
+/// Repeats trials (retry sequences) separated by a fixed delay, using an underlying retrier.
+///
+/// All attempts of the underlying retrier are relayed.
+///
+/// Behavior:
+/// ```swift
+/// while(true) {
+///   let retrier = createRetrier(policy, job)
+///   do {
+///     try await retrier.value
+///     // On success, sleep before begining another trial
+///     await sleep(repeatDelay)
+///   } catch {
+///     // The only possible failure is cancellation
+///     finish()
+///     break
+///   }
+/// }
+/// ```
+///
+/// On cancellation, the publisher finishes without emitting anything else.
 public class InfallibleRepeater<Output>: Repeater, InfallibleRetrier, Cancellable {
 
     private let innerRepeater: FallibleRepeater<Output>

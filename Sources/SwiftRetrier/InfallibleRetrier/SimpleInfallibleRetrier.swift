@@ -1,6 +1,13 @@
 import Foundation
 import Combine
 
+/// Single output infallible retrier
+///
+/// Retries with delay according to its policy, until:
+/// - **an attempt succeeds:** any awaiting on the `value` property will be returned the success value, the publisher emits
+/// an attempt success embedding this value then finishes.
+/// - **the retrier is canceled:** any awaiting on the `value` property will throw a `CancellationError`, the publisher
+/// finishes without emitting anything else.
 public class SimpleInfallibleRetrier<Output>: SingleOutputInfallibleRetrier {
 
     private let policy: InfallibleRetryPolicy

@@ -1,6 +1,15 @@
 import Foundation
 import Combine
 
+/// Single output fallible retrier
+///
+/// Retries with delay according to its policy, until:
+/// - **an attempt succeeds:** any awaiting on the `value` property will be returned the success value, the publisher emits
+/// an attempt success embedding this value then finishes.
+/// - **the policy gives up:** any awaiting on the `value` property will throw with the last attempt error, the publisher emits
+/// the attempt failure before completing with a failure embedding the attempt error.
+/// - **the retrier is canceled:** any awaiting on the `value` property will throw a `CancellationError`, the publisher
+/// finishes without emitting anything else.
 public class SimpleRetrier<Value>: SingleOutputFallibleRetrier {
     
     private let subject = PassthroughSubject<Result<Value, Error>, Error>()
