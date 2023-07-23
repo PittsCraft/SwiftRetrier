@@ -6,7 +6,6 @@ public protocol SingleOutputRetrier: Retrier {
     var value: Output { get async throws }
 }
 
-
 public extension SingleOutputRetrier {
 
     var cancellableValue: Output {

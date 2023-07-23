@@ -11,7 +11,7 @@ public extension InfallibleRetryPolicyInstance {
                                                               jitter: jitter)
         return .init(wrapped)
     }
-    
+
     static func constantBackoff(delay: TimeInterval = 1) -> InfallibleRetryPolicyInstance {
         let wrapped = ConstantBackoffInfallibleRetryPolicy(delay: delay)
         return .init(wrapped)

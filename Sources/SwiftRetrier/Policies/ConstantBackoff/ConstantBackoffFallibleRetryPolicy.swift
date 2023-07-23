@@ -5,7 +5,7 @@ open class ConstantBackoffFallibleRetryPolicy: FallibleRetryPolicy {
     public let maxAttempts: Int
     public let giveUpOn: (Error) -> Bool
     public let retryOn: (Error) -> Bool
-    
+
     public init(delay: TimeInterval = 1,
                 maxAttempts: Int = Int.max,
                 giveUpOn: @escaping (Error) -> Bool = { _ in false },
