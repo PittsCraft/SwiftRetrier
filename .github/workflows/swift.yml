@@ -1,0 +1,29 @@
+name: Swift
+
+on:
+  pull_request:
+    branches: [ "develop", "main" ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - uses: swift-actions/setup-swift@v1
+      with:
+        swift-version: '5.8'
+    - uses: actions/checkout@v3
+    - name: Check XCode Version
+      run: xcodebuild -version
+    - name: Build
+      run: swift build -v
+    - name: Run tests
+      run: swift test -v
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: SwiftLint
+      uses: raphaelbussa/swiftlint-action@main
+      with:
+        subcommand: lint --strict
