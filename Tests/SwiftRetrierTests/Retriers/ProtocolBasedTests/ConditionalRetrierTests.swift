@@ -52,7 +52,7 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
     func test_receive_attempt_error_when_trial_cancelled_by_condition() {
         let expectationAttemptFailureReceived = expectation(description: "AttemptFailure received")
 
-        let retrier = buildRetrier(trueFalseTruePublisher, defaultAsyncJob)
+        let retrier = buildRetrier(trueFalseTruePublisher(defaultJobDuration), asyncJob(2 * defaultJobDuration))
         let cancellable = retrier.attemptPublisher
             .sink(receiveCompletion: { _ in }, receiveValue: {
                 if case .failure(let error) = $0 {
@@ -62,7 +62,7 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
                     }
                 }
             })
-        wait(for: [expectationAttemptFailureReceived], timeout: defaultSequenceWaitingTime * 2)
+        wait(for: [expectationAttemptFailureReceived], timeout: 6 * defaultJobDuration)
         cancellable.cancel()
     }
 
@@ -70,7 +70,7 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
     func test_publisher_receive_second_trial_success() async {
         let expectationValueReceived = expectation(description: "Success received")
 
-        let retrier = buildRetrier(trueFalseTruePublisher, defaultAsyncJob)
+        let retrier = buildRetrier(trueFalseTruePublisher(), defaultAsyncJob)
         let cancellable = retrier.attemptPublisher
             .sink(receiveCompletion: { _ in },
                   receiveValue: {
@@ -95,7 +95,7 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
         }
         let expectationOwnErrorPropagated = expectation(description: "Attempt own error propagated")
 
-        let retrier = buildRetrier(trueFalseTruePublisher, job)
+        let retrier = buildRetrier(trueFalseTruePublisher(), job)
         let cancellable = retrier.attemptPublisher
             .sink(receiveCompletion: { _ in },
                   receiveValue: {

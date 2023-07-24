@@ -13,12 +13,14 @@ let immediateSuccessJob: Job<Void> = {}
 let defaultError = NSError(domain: "SwiftRetrier", code: 1412)
 let immediateFailureJob: Job<Void> = { throw defaultError }
 let defaultAsyncJob: Job<Void> = { try await taskWait(defaultJobDuration) }
+func asyncJob(_ duration: TimeInterval) -> Job<Void> {
+    { try await taskWait(duration) }
+}
 
-var trueFalseTruePublisher: AnyPublisher<Bool, Never> {
+func trueFalseTruePublisher(_ valueDuration: TimeInterval = defaultJobDuration / 2) -> AnyPublisher<Bool, Never> {
     [false, true]
         .publisher
-    // Delay for proper time to interrupt job with `defaultJobDuration`
-        .delay(for: .seconds(defaultWaitingTime), scheduler: OperationQueue.main)
+        .delay(for: .seconds(valueDuration), scheduler: OperationQueue.main)
         .prepend(Just(true))
         .eraseToAnyPublisher()
 }

@@ -45,7 +45,7 @@ class SingleOutputConditionalRetrierTests<R: SingleOutputConditionalRetrier>: XC
         let job = {
             try await taskWait()
         }
-        let retrier = buildRetrier(trueFalseTruePublisher, job)
+        let retrier = buildRetrier(trueFalseTruePublisher(), job)
         let expectation = expectation(description: "Receive async output")
         Task {
             _ = try await retrier.value
@@ -61,7 +61,7 @@ class SingleOutputConditionalRetrierTests<R: SingleOutputConditionalRetrier>: XC
         }
         let expectation = expectation(description: "Finished")
 
-        let retrier = buildRetrier(trueFalseTruePublisher, job)
+        let retrier = buildRetrier(trueFalseTruePublisher(), job)
         let cancellable = retrier.attemptPublisher
             .sink(receiveCompletion: {
                 if case .finished = $0 {
@@ -85,7 +85,7 @@ class SingleOutputConditionalRetrierTests<R: SingleOutputConditionalRetrier>: XC
         }
         let completionReceived = expectation(description: "Completion received")
 
-        let retrier = buildRetrier(trueFalseTruePublisher, job)
+        let retrier = buildRetrier(trueFalseTruePublisher(), job)
         let cancellable = retrier.attemptPublisher
             .sink(receiveCompletion: { _ in
                 completionReceived.fulfill()
