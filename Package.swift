@@ -5,11 +5,11 @@ import PackageDescription
 
 let lint = false
 
-var dependencies: [Package.Dependency] = []
-var plugins: [Target.PluginUsage] = []
+var extraDependencies: [Package.Dependency] = []
+var extraPlugins: [Target.PluginUsage] = []
 if lint {
-    dependencies = [.package(url: "https://github.com/realm/SwiftLint", exact: "0.52.4")]
-    plugins = [.plugin(name: "SwiftLintPlugin", package: "SwiftLint")]
+    extraDependencies = [.package(url: "https://github.com/realm/SwiftLint", exact: "0.52.4")]
+    extraPlugins = [.plugin(name: "SwiftLintPlugin", package: "SwiftLint")]
 }
 
 let package = Package(
@@ -23,17 +23,17 @@ let package = Package(
             name: "SwiftRetrier",
             targets: ["SwiftRetrier"])
     ],
-    dependencies: dependencies,
+    dependencies: [] + extraDependencies,
     targets: [
         .target(
             name: "SwiftRetrier",
             dependencies: [],
-            plugins: plugins
+            plugins: [] + extraPlugins
         ),
         .testTarget(
             name: "SwiftRetrierTests",
             dependencies: ["SwiftRetrier"],
-            plugins: plugins
+            plugins: [] + extraPlugins
         )
     ]
 )
