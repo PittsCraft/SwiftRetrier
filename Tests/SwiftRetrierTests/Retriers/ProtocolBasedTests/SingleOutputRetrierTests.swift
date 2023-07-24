@@ -93,13 +93,13 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
                 throw error
             }
         })
-        try await taskWait()
+        try await taskWait(defaultJobDuration / 4)
         retrier.cancel()
         do {
             _ = try await retrier.value
             XCTFail("Unexpected success")
         } catch {}
-        await fulfillment(of: [expectation], timeout: defaultSequenceWaitingTime * 2)
+        await fulfillment(of: [expectation], timeout: defaultJobDuration * 2)
     }
 
     @MainActor
