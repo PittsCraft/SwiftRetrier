@@ -6,8 +6,8 @@ import Combine
 /// When the condition is `true`, retries according to the policy until:
 /// - **the condition becomes `false`:** an attempt failure with `CancellationError` is emited by the publisher if a job
 /// was indeed interrupted, then the retrier waits for the condition to become `true` again
-/// - **an attempt succeeds:** any awaiting on the `value` property will be returned the success value, the publisher emits
-/// an attempt success embedding this value then finishes.
+/// - **an attempt succeeds:** any awaiting on the `value` property will be returned
+/// the success value, the publisher emits an attempt success embedding this value then finishes.
 /// - **the retrier is canceled:** any awaiting on the `value` property will throw a `CancellationError`, the publisher
 /// finishes without emitting anything else.
 ///
@@ -17,10 +17,11 @@ import Combine
 /// then any awaiting on the `value` property `RetryError.conditionPublisherCompleted` and the publisher finishes.
 public class ConditionalInfallibleRetrier<T>: SingleOutputInfallibleRetrier, SingleOutputConditionalRetrier {
 
-
     private let innerRetrier: ConditionalFallibleRetrier<T>
 
-    public init<P: Publisher<Bool, Never>>(policy: InfallibleRetryPolicyInstance, conditionPublisher: P, job: @escaping Job<T>) {
+    public init<P: Publisher<Bool, Never>>(policy: InfallibleRetryPolicyInstance,
+                                           conditionPublisher: P,
+                                           job: @escaping Job<T>) {
         self.innerRetrier = ConditionalFallibleRetrier(policy: policy.toFallibleRetryPolicy().instance(),
                                                        conditionPublisher: conditionPublisher,
                                                        job: job)
@@ -42,4 +43,3 @@ public class ConditionalInfallibleRetrier<T>: SingleOutputInfallibleRetrier, Sin
         innerRetrier.cancel()
     }
 }
-

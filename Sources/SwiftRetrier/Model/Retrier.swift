@@ -9,7 +9,7 @@ public protocol Retrier: Cancellable, AnyObject {
 }
 
 public extension Retrier {
-    
+
     var attemptSuccessPublisher: AnyPublisher<Output, Failure> {
         attemptPublisher.success()
     }

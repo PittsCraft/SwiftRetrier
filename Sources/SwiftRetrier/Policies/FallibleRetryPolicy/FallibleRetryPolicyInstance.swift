@@ -16,4 +16,3 @@ public struct FallibleRetryPolicyInstance: FallibleRetryPolicy {
         FallibleRetryPolicyInstance(wrapped.freshFallibleCopy())
     }
 }
-

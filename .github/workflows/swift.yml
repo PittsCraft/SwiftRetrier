@@ -1,0 +1,29 @@
+name: Swift
+
+on:
+  pull_request:
+    branches: [ "develop", "main" ]
+
+jobs:
+  build:
+    runs-on: macos-13
+
+    steps:
+    - uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+    - name: Check XCode Version
+      run: xcodebuild -version
+    - uses: actions/checkout@v3
+    - name: Build
+      run: xcodebuild -scheme SwiftRetrier build -destination "platform=OS X"
+    - name: Run tests
+      run: xcodebuild -scheme SwiftRetrier test -destination "platform=OS X"
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: SwiftLint
+      uses: raphaelbussa/swiftlint-action@main
+      with:
+        subcommand: lint --strict

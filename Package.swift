@@ -3,24 +3,37 @@
 
 import PackageDescription
 
+let lint = false
+
+var extraDependencies: [Package.Dependency] = []
+var extraPlugins: [Target.PluginUsage] = []
+if lint {
+    extraDependencies = [.package(url: "https://github.com/realm/SwiftLint", exact: "0.52.4")]
+    extraPlugins = [.plugin(name: "SwiftLintPlugin", package: "SwiftLint")]
+}
+
 let package = Package(
     name: "SwiftRetrier",
     platforms: [
         .iOS(.v14),
-        .macOS(.v11)
+        .macOS(.v12)
     ],
     products: [
         .library(
             name: "SwiftRetrier",
-            targets: ["SwiftRetrier"]),
+            targets: ["SwiftRetrier"])
     ],
-    dependencies: [],
+    dependencies: [] + extraDependencies,
     targets: [
         .target(
             name: "SwiftRetrier",
-            dependencies: []),
+            dependencies: [],
+            plugins: [] + extraPlugins
+        ),
         .testTarget(
             name: "SwiftRetrierTests",
-            dependencies: ["SwiftRetrier"]),
+            dependencies: ["SwiftRetrier"],
+            plugins: [] + extraPlugins
+        )
     ]
 )

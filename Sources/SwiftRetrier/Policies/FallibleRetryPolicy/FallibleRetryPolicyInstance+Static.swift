@@ -19,7 +19,7 @@ public extension FallibleRetryPolicyInstance {
     }
 
     static func constantBackoff(delay: TimeInterval = 1,
-                                maxAttempts: Int = Int.max,
+                                maxAttempts: UInt = UInt.max,
                                 giveUpOn: @escaping (Error) -> Bool = { _ in false },
                                 retryOn: @escaping (Error) -> Bool = { _ in false }) -> FallibleRetryPolicyInstance {
         let wrapped = ConstantBackoffFallibleRetryPolicy(delay: delay,
@@ -29,7 +29,7 @@ public extension FallibleRetryPolicyInstance {
         return .init(wrapped)
     }
 
-    static func immediate(maxAttempts: Int = Int.max,
+    static func immediate(maxAttempts: UInt = UInt.max,
                           giveUpOn: @escaping (Error) -> Bool = { _ in false },
                           retryOn: @escaping (Error) -> Bool = { _ in false }) -> FallibleRetryPolicyInstance {
         constantBackoff(delay: 0, maxAttempts: maxAttempts, giveUpOn: giveUpOn, retryOn: retryOn)

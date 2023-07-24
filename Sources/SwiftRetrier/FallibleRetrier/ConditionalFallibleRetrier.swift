@@ -6,10 +6,11 @@ import Combine
 /// When the condition is `true`, retries according to the policy until:
 /// - **the condition becomes `false`:** an attempt failure with `CancellationError` is emited by the publisher if a job
 /// was indeed interrupted, then the retrier waits for the condition to become `true` again
-/// - **an attempt succeeds:** any awaiting on the `value` property will be returned the success value, the publisher emits
-/// an attempt success embedding this value then finishes.
-/// - **the policy gives up:** any awaiting on the `value` property will throw with the last attempt error, the publisher emits
-/// the attempt failure before completing with a failure embedding the attempt error.
+/// - **an attempt succeeds:** any awaiting on the `value` property will be returned
+///  the success value, the publisher emits an attempt success embedding this value then finishes.
+/// - **the policy gives up:** any awaiting on the `value` property will throw with
+/// the last attempt error, the publisher emits the attempt failure before completing with a
+/// failure embedding the attempt error.
 /// - **the retrier is canceled:** any awaiting on the `value` property will throw a `CancellationError`, the publisher
 /// finishes without emitting anything else.
 ///
@@ -45,14 +46,14 @@ public class ConditionalFallibleRetrier<Output>: SingleOutputFallibleRetrier, Si
             .removeDuplicates()
             .sink(
                 // We retain self here, so that this retrier keeps working even if it's not retained anywhere else
-                receiveCompletion: { [self] completion in
+                receiveCompletion: { [self] _ in
                     if lastCondition != true {
                         // The task will never be executed anymore and continuation will never be called with a relevant
                         // output.
                         subject.send(completion: .failure(RetryError.conditionPublisherCompleted))
                     }
                 },
-                receiveValue:{ [unowned self] condition in
+                receiveValue: { [unowned self] condition in
                     lastCondition = condition
                     if condition {
                         startRetrier()

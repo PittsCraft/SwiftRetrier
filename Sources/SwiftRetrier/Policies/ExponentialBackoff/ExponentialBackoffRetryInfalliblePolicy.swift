@@ -21,19 +21,20 @@ open class ExponentialBackoffInfallibleRetryPolicy: InfallibleRetryPolicy {
         self.jitter = jitter
     }
 
-    public func exponentiationBySquaring<T: BinaryInteger>(_ y: T, _ x: T, _ n: T) -> T {
-        precondition(n >= 0)
-        if n == 0 {
-            return y
-        } else if n == 1 {
-            return y * x
-        } else if n.isMultiple(of: 2) {
-            return exponentiationBySquaring(y, x * x, n / 2)
+    public func exponentiationBySquaring<T: BinaryInteger>(_ base: T, _ multiplier: T, _ exponent: T) -> T {
+        precondition(exponent >= 0)
+        if exponent == 0 {
+            return base
+        } else if exponent == 1 {
+            return base * multiplier
+        } else if exponent.isMultiple(of: 2) {
+            return exponentiationBySquaring(base, multiplier * multiplier, exponent / 2)
         } else { // n is odd
-            return exponentiationBySquaring(y * x, x * x, (n - 1) / 2)
+            return exponentiationBySquaring(base * multiplier, multiplier * multiplier, (exponent - 1) / 2)
         }
     }
 
+    // swiftlint:disable:next line_length
     // See https://stackoverflow.com/questions/24196689/how-to-get-the-power-of-some-integer-in-swift-language/39021464#39021464
     public func pow<T: BinaryInteger>(_ base: T, _ power: T) -> T {
         return exponentiationBySquaring(1, base, power)
