@@ -6,9 +6,9 @@ open class ExponentialBackoffFallibleRetryPolicy: ExponentialBackoffInfallibleRe
     public let giveUpOn: (Error) -> Bool
     public let retryOn: (Error) -> Bool
 
-    public init(timeSlot: TimeInterval = 0.2,
-                maxDelay: TimeInterval = 3600,
-                jitter: Jitter = .full,
+    public init(timeSlot: TimeInterval = ExponentialBackoffConstants.defaultTimeSlot,
+                maxDelay: TimeInterval = ExponentialBackoffConstants.defaultMaxDelay,
+                jitter: Jitter = ExponentialBackoffConstants.defaultJitter,
                 maxAttempts: UInt = UInt.max,
                 giveUpOn: @escaping (Error) -> Bool = { _ in false },
                 retryOn: @escaping (Error) -> Bool = { _ in false }) {

@@ -3,12 +3,14 @@ import Foundation
 /// Built-in concrete instances and custom wrapper builder
 public extension FallibleRetryPolicyInstance {
 
-    static func exponentialBackoff(timeSlot: TimeInterval = 0.2,
-                                   maxDelay: TimeInterval = 3600,
-                                   jitter: ExponentialBackoffInfallibleRetryPolicy.Jitter = .full,
-                                   maxAttempts: UInt = UInt.max,
-                                   giveUpOn: @escaping (Error) -> Bool = { _ in false },
-                                   retryOn: @escaping (Error) -> Bool = { _ in false }) -> FallibleRetryPolicyInstance {
+    static func exponentialBackoff(
+        timeSlot: TimeInterval = ExponentialBackoffConstants.defaultTimeSlot,
+        maxDelay: TimeInterval = ExponentialBackoffConstants.defaultMaxDelay,
+        jitter: ExponentialBackoffInfallibleRetryPolicy.Jitter = ExponentialBackoffConstants.defaultJitter,
+        maxAttempts: UInt = UInt.max,
+        giveUpOn: @escaping (Error) -> Bool = { _ in false },
+        retryOn: @escaping (Error) -> Bool = { _ in false }
+    ) -> FallibleRetryPolicyInstance {
         let wrapped = ExponentialBackoffFallibleRetryPolicy(timeSlot: timeSlot,
                                                             maxDelay: maxDelay,
                                                             jitter: jitter,
@@ -18,7 +20,7 @@ public extension FallibleRetryPolicyInstance {
         return .init(wrapped)
     }
 
-    static func constantBackoff(delay: TimeInterval = 1,
+    static func constantBackoff(delay: TimeInterval = ConstantBackoffConstants.defaultDelay,
                                 maxAttempts: UInt = UInt.max,
                                 giveUpOn: @escaping (Error) -> Bool = { _ in false },
                                 retryOn: @escaping (Error) -> Bool = { _ in false }) -> FallibleRetryPolicyInstance {
