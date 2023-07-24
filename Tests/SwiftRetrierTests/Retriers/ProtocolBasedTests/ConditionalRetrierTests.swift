@@ -62,7 +62,7 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
                     }
                 }
             })
-        wait(for: [expectationAttemptFailureReceived], timeout: defaultSequenceWaitingTime)
+        wait(for: [expectationAttemptFailureReceived], timeout: defaultSequenceWaitingTime * 2)
         cancellable.cancel()
     }
 

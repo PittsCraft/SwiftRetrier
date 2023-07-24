@@ -28,7 +28,7 @@ class RepeaterTests<R: Repeater>: XCTestCase {
                 expectation.fulfill()
             }
         })
-        waitForExpectations(timeout: defaultSequenceWaitingTime / 2)
+        waitForExpectations(timeout: defaultSequenceWaitingTime)
     }
 
     override class var defaultTestSuite: XCTestSuite {

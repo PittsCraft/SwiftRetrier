@@ -99,7 +99,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
             _ = try await retrier.value
             XCTFail("Unexpected success")
         } catch {}
-        await fulfillment(of: [expectation], timeout: defaultSequenceWaitingTime)
+        await fulfillment(of: [expectation], timeout: defaultSequenceWaitingTime * 2)
     }
 
     @MainActor

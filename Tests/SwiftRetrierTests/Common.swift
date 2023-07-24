@@ -8,7 +8,6 @@ let repeatDelay = 0.1 * factor
 let defaultJobDuration = 0.1 * factor
 let defaultSequenceWaitingTime = 0.5 * factor
 
-
 let defaultWaitingTime = defaultJobDuration / 2
 let immediateSuccessJob: Job<Void> = {}
 let defaultError = NSError(domain: "SwiftRetrier", code: 1412)
