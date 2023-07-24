@@ -6,7 +6,7 @@ open class ConstantBackoffFallibleRetryPolicy: FallibleRetryPolicy {
     public let giveUpOn: (Error) -> Bool
     public let retryOn: (Error) -> Bool
 
-    public init(delay: TimeInterval = 1,
+    public init(delay: TimeInterval = ConstantBackoffConstants.defaultDelay,
                 maxAttempts: UInt = UInt.max,
                 giveUpOn: @escaping (Error) -> Bool = { _ in false },
                 retryOn: @escaping (Error) -> Bool = { _ in false }) {

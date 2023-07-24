@@ -5,7 +5,7 @@ open class ExponentialBackoffInfallibleRetryPolicy: InfallibleRetryPolicy {
     public enum Jitter {
         case none
         case full
-        case decorrelated
+        case decorrelated(growthFactor: Double = ExponentialBackoffConstants.defaultDecorrelatedJitterGrowthFactor)
     }
 
     public let timeSlot: TimeInterval
@@ -13,9 +13,9 @@ open class ExponentialBackoffInfallibleRetryPolicy: InfallibleRetryPolicy {
     public let jitter: Jitter
     private var previousDelay: TimeInterval?
 
-    public init(timeSlot: TimeInterval = 0.2,
-                maxDelay: TimeInterval = 3600,
-                jitter: Jitter = .full) {
+    public init(timeSlot: TimeInterval = ExponentialBackoffConstants.defaultTimeSlot,
+                maxDelay: TimeInterval = ExponentialBackoffConstants.defaultMaxDelay,
+                jitter: Jitter = ExponentialBackoffConstants.defaultJitter) {
         self.timeSlot = timeSlot
         self.maxDelay = maxDelay
         self.jitter = jitter
@@ -29,7 +29,7 @@ open class ExponentialBackoffInfallibleRetryPolicy: InfallibleRetryPolicy {
             return base * multiplier
         } else if exponent.isMultiple(of: 2) {
             return exponentiationBySquaring(base, multiplier * multiplier, exponent / 2)
-        } else { // n is odd
+        } else { // exponent is odd
             return exponentiationBySquaring(base * multiplier, multiplier * multiplier, (exponent - 1) / 2)
         }
     }
@@ -49,10 +49,10 @@ open class ExponentialBackoffInfallibleRetryPolicy: InfallibleRetryPolicy {
         TimeInterval.random(in: 0...noJitterDelay(attemptIndex: attemptIndex))
     }
 
-    public func decorrelatedJitterDelay(attemptIndex: UInt) -> TimeInterval {
+    public func decorrelatedJitterDelay(attemptIndex: UInt, growthFactor: Double) -> TimeInterval {
         let delay: TimeInterval
         if let previousDelay {
-            let max = max(timeSlot, 3 * previousDelay)
+            let max = max(timeSlot, growthFactor * previousDelay)
             delay = TimeInterval.random(in: timeSlot...max)
         } else {
             delay = fullJitterDelay(attemptIndex: attemptIndex)
@@ -67,8 +67,8 @@ open class ExponentialBackoffInfallibleRetryPolicy: InfallibleRetryPolicy {
             return noJitterDelay(attemptIndex: attemptIndex)
         case .full:
             return fullJitterDelay(attemptIndex: attemptIndex)
-        case .decorrelated:
-            return decorrelatedJitterDelay(attemptIndex: attemptIndex)
+        case .decorrelated(let growthFactor):
+            return decorrelatedJitterDelay(attemptIndex: attemptIndex, growthFactor: growthFactor)
         }
     }
 

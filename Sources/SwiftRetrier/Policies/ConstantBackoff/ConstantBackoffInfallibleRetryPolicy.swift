@@ -4,7 +4,7 @@ open class ConstantBackoffInfallibleRetryPolicy: InfallibleRetryPolicy {
 
     public let delay: TimeInterval
 
-    init(delay: TimeInterval) {
+    init(delay: TimeInterval = ConstantBackoffConstants.defaultDelay) {
         self.delay = delay
     }
 

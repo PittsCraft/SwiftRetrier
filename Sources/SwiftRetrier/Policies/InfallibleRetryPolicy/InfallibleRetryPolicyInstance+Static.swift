@@ -2,9 +2,9 @@ import Foundation
 
 public extension InfallibleRetryPolicyInstance {
     static func exponentialBackoff(
-        timeSlot: TimeInterval = 0.2,
-        maxDelay: TimeInterval = 3600,
-        jitter: ExponentialBackoffInfallibleRetryPolicy.Jitter = .full
+        timeSlot: TimeInterval = ExponentialBackoffConstants.defaultTimeSlot,
+        maxDelay: TimeInterval = ExponentialBackoffConstants.defaultMaxDelay,
+        jitter: ExponentialBackoffInfallibleRetryPolicy.Jitter = ExponentialBackoffConstants.defaultJitter
     ) -> InfallibleRetryPolicyInstance {
         let wrapped = ExponentialBackoffInfallibleRetryPolicy(timeSlot: timeSlot,
                                                               maxDelay: maxDelay,
@@ -12,7 +12,9 @@ public extension InfallibleRetryPolicyInstance {
         return .init(wrapped)
     }
 
-    static func constantBackoff(delay: TimeInterval = 1) -> InfallibleRetryPolicyInstance {
+    static func constantBackoff(
+        delay: TimeInterval = ConstantBackoffConstants.defaultDelay
+    ) -> InfallibleRetryPolicyInstance {
         let wrapped = ConstantBackoffInfallibleRetryPolicy(delay: delay)
         return .init(wrapped)
     }
