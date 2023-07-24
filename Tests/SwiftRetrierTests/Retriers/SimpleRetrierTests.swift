@@ -6,7 +6,7 @@ import Combine
 class SimpleRetrier_RetrierTests: RetrierTests<SimpleRetrier<Void>> {
     override func setUp() {
         retrier = {
-            SimpleRetrier(policy: .constantBackoff(delay: 0.1), job: $0)
+            SimpleRetrier(policy: .testDefault(), job: $0)
         }
     }
 }
@@ -22,7 +22,7 @@ class SimpleRetrier_FallibleRetrierTests: FallibleRetrierTests<SimpleRetrier<Voi
 class SimpleRetrier_SingleOutputRetrierTests: SingleOutputRetrierTests<SimpleRetrier<Void>> {
     override func setUp() {
         retrier = {
-            SimpleRetrier(policy: .constantBackoff(delay: 0.1), job: $0)
+            SimpleRetrier(policy: .testDefault(), job: $0)
         }
     }
 }

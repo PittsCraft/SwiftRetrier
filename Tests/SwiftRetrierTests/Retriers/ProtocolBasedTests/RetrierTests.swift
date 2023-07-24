@@ -6,9 +6,6 @@ class RetrierTests<R: Retrier>: XCTestCase {
 
     var retrier: ((@escaping Job<Void>) -> R)!
 
-    private let successJob: () -> Void = {}
-    private let failureJob: () throws -> Void = { throw nsError }
-
     private var instance: R?
 
     func buildRetrier(_ job: @escaping Job<Void>) -> R {
@@ -24,22 +21,21 @@ class RetrierTests<R: Retrier>: XCTestCase {
     }
 
     func test_attempt_failure_received() {
-        let ownError = NSError(domain: "Domain", code: 0)
-        let retrier = buildRetrier({ throw ownError })
+        let retrier = buildRetrier({ throw defaultError })
         let expectation = expectation(description: "Failure received")
         let cancellable = retrier
             .attemptPublisher
             .sink(receiveCompletion: { _ in }, receiveValue: {
-                if case .failure(let error) = $0, error as NSError == ownError {
+                if case .failure(let error) = $0, error as NSError == defaultError {
                     expectation.fulfill()
                 }
             })
-        waitForExpectations(timeout: 0.1)
+        waitForExpectations(timeout: defaultWaitingTime)
         cancellable.cancel()
     }
 
     func test_attempt_success_received() {
-        let retrier = buildRetrier(successJob)
+        let retrier = buildRetrier(immediateSuccessJob)
         let expectation = expectation(description: "Success received")
         let cancellable = retrier
             .attemptPublisher
@@ -48,7 +44,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
                     expectation.fulfill()
                 }
             })
-        waitForExpectations(timeout: 0.1)
+        waitForExpectations(timeout: defaultWaitingTime)
         cancellable.cancel()
     }
 
@@ -57,7 +53,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         let retrier = buildRetrier({
             if !calledOnce {
                 calledOnce = true
-                throw nsError
+                throw defaultError
             }
         })
         let successExpectation = expectation(description: "Success received")
@@ -76,7 +72,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
                     failureReceived = true
                 }
             })
-        waitForExpectations(timeout: 1)
+        waitForExpectations(timeout: defaultSequenceWaitingTime)
         cancellable.cancel()
     }
 
@@ -85,24 +81,25 @@ class RetrierTests<R: Retrier>: XCTestCase {
             XCTFail("Should not be called on immediate cancellation")
         })
         retrier.cancel()
-        _ = XCTWaiter.wait(for: [expectation(description: "Wait for some time")], timeout: 0.2)
+        _ = XCTWaiter.wait(for: [expectation(description: "Wait for some time")], timeout: defaultSequenceWaitingTime)
     }
 
     func test_no_value_received_after_immediate_cancellation() {
-        let retrier = buildRetrier(successJob)
+        let retrier = buildRetrier(immediateSuccessJob)
         let cancellable = retrier.attemptPublisher
             .sink(receiveCompletion: { _ in },
                   receiveValue: { _ in
                 XCTFail("Should not receive value on immediate cancellation")
             })
         retrier.cancel()
-        _ = XCTWaiter.wait(for: [expectation(description: "Wait for some time")], timeout: 0.2)
+        _ = XCTWaiter.wait(for: [expectation(description: "Wait for some time")],
+                           timeout: defaultSequenceWaitingTime / 2)
         cancellable.cancel()
     }
 
     func test_finished_received_after_cancellation() {
         let failureExpectation = expectation(description: "Failure received")
-        let retrier = buildRetrier(successJob)
+        let retrier = buildRetrier(immediateSuccessJob)
         let cancellable = retrier.attemptPublisher
             .sink(receiveCompletion: {
                 if case .finished = $0 {
@@ -119,9 +116,9 @@ class RetrierTests<R: Retrier>: XCTestCase {
 
     @MainActor
     func test_deallocated_some_time_after_cancellation() async throws {
-        weak var retrier = retrier(failureJob)
+        weak var retrier = retrier(immediateFailureJob)
         retrier?.cancel()
-        try await Task.sleep(nanoseconds: nanoseconds(0.1))
+        try await taskWait()
         XCTAssertNil(retrier)
     }
 
@@ -133,11 +130,11 @@ class RetrierTests<R: Retrier>: XCTestCase {
             if shouldSignalExecution {
                 executed = true
             }
-            throw nsError
+            throw defaultError
         }
-        try await Task.sleep(nanoseconds: nanoseconds(0.1))
+        try await taskWait()
         shouldSignalExecution = true
-        try await Task.sleep(nanoseconds: nanoseconds(0.2))
+        try await taskWait(defaultSequenceWaitingTime / 2)
         XCTAssertTrue(executed)
         retrier?.cancel()
     }

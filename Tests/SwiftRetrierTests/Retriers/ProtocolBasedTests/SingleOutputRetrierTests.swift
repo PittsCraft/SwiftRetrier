@@ -5,9 +5,6 @@ import XCTest
 class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
     var retrier: ((@escaping Job<Void>) -> R)!
 
-    let successJob: Job<Void> = {}
-    let failureJob: Job<Void> = { throw nsError }
-
     private var instance: R?
 
     func buildRetrier(_ job: @escaping Job<Void>) -> R {
@@ -23,7 +20,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
     }
 
     func test_publisher_finished_received_on_success() {
-        let retrier = buildRetrier(successJob)
+        let retrier = buildRetrier(immediateSuccessJob)
         let expectation = expectation(description: "Finished received")
         let cancellable = retrier
             .attemptPublisher
@@ -32,12 +29,12 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
                     expectation.fulfill()
                 }
             }, receiveValue: { _ in })
-        waitForExpectations(timeout: 0.1)
+        waitForExpectations(timeout: defaultWaitingTime)
         cancellable.cancel()
     }
 
     func test_success_publisher_finished_received_on_success() {
-        let retrier = buildRetrier(successJob)
+        let retrier = buildRetrier(immediateSuccessJob)
         let expectation = expectation(description: "Finished received")
         let cancellable = retrier
             .attemptSuccessPublisher
@@ -46,7 +43,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
                     expectation.fulfill()
                 }
             }, receiveValue: { _ in })
-        waitForExpectations(timeout: 0.1)
+        waitForExpectations(timeout: defaultWaitingTime)
         cancellable.cancel()
     }
 
@@ -55,7 +52,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         let retrier = buildRetrier({
             if !calledOnce {
                 calledOnce = true
-                throw nsError
+                throw defaultError
             }
         })
         let expectation = expectation(description: "Completes")
@@ -65,7 +62,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
                     expectation.fulfill()
                 }
             }, receiveValue: { _ in })
-        waitForExpectations(timeout: 0.3)
+        waitForExpectations(timeout: defaultSequenceWaitingTime)
         cancellable.cancel()
     }
 
@@ -74,7 +71,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         let retrier = buildRetrier({
             if !calledOnce {
                 calledOnce = true
-                throw nsError
+                throw defaultError
             }
         })
         let expectation = expectation(description: "Got async value")
@@ -82,48 +79,46 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
             _ = try await retrier.value
             expectation.fulfill()
         }
-        waitForExpectations(timeout: 0.3)
+        waitForExpectations(timeout: defaultSequenceWaitingTime)
     }
 
     @MainActor
-    func test_await_value_throws_on_cancellation() async {
+    func test_await_value_throws_on_cancellation() async throws {
         let expectation = expectation(description: "Cancellation catched")
         let retrier = buildRetrier({
             do {
-                try await Task.sleep(nanoseconds: nanoseconds(0.1))
+                try await taskWait(defaultJobDuration)
             } catch {
                 expectation.fulfill()
                 throw error
             }
         })
-        do {
-            try await Task.sleep(nanoseconds: nanoseconds(0.05))
-        } catch {}
+        try await taskWait()
         retrier.cancel()
         do {
             _ = try await retrier.value
             XCTFail("Unexpected success")
         } catch {}
-        await fulfillment(of: [expectation], timeout: 0.2)
+        await fulfillment(of: [expectation], timeout: defaultSequenceWaitingTime)
     }
 
     @MainActor
     func test_value_await_resolves_when_already_succeeded() async throws {
-        let retrier = buildRetrier(successJob)
+        let retrier = buildRetrier(immediateSuccessJob)
         // Let the retrier finish
-        try await Task.sleep(nanoseconds: nanoseconds(0.1))
+        try await taskWait()
         let expectation = expectation(description: "Value await resolved")
         Task {
             _ = try await retrier.value
             expectation.fulfill()
         }
-        await fulfillment(of: [expectation], timeout: 0.1)
+        await fulfillment(of: [expectation], timeout: defaultSequenceWaitingTime)
     }
 
     @MainActor
     func test_deallocated_some_time_after_success() async throws {
-        weak var retrier = retrier(successJob)
-        try await Task.sleep(nanoseconds: nanoseconds(0.1))
+        weak var retrier = retrier(immediateSuccessJob)
+        try await taskWait()
         XCTAssertNil(retrier)
     }
 

@@ -6,9 +6,6 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
 
     var retrier: ((AnyPublisher<Bool, Never>, @escaping Job<Void>) -> R)!
 
-    let successJob: Job<Void> = {}
-    let failureJob: Job<Void> = { throw nsError }
-
     private var instance: R?
 
     func buildRetrier(_ conditionsPublisher: AnyPublisher<Bool, Never>, _ job: @escaping Job<Void>) -> R {
@@ -30,7 +27,7 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
         _ = buildRetrier(condition, {
             XCTFail("Job shouldn't be executed when no condition value is emitted")
         })
-        try await Task.sleep(nanoseconds: nanoseconds(0.05))
+        try await taskWait()
     }
 
     @MainActor
@@ -41,7 +38,7 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
         _ = buildRetrier(condition, {
             XCTFail("Job shouldn't be executed when false condition is emitted before completion")
         })
-        try await Task.sleep(nanoseconds: nanoseconds(0.05))
+        try await taskWait()
     }
 
     func test_execution_when_condition_true() {
@@ -49,25 +46,13 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
             .eraseToAnyPublisher()
         let expectation = expectation(description: "Job executed")
         _ = buildRetrier(condition, { expectation.fulfill() })
-        waitForExpectations(timeout: 0.05)
-    }
-
-    var trueFalseTruePublisher: AnyPublisher<Bool, Never> {
-        [false, true]
-            .publisher
-            .delay(for: .seconds(0.05), scheduler: OperationQueue.main)
-            .prepend(Just(true))
-            .eraseToAnyPublisher()
+        waitForExpectations(timeout: defaultWaitingTime)
     }
 
     func test_receive_attempt_error_when_trial_cancelled_by_condition() {
-        let job = {
-            try await Task.sleep(nanoseconds: nanoseconds(0.1))
-        }
-
         let expectationAttemptFailureReceived = expectation(description: "AttemptFailure received")
 
-        let retrier = buildRetrier(trueFalseTruePublisher, job)
+        let retrier = buildRetrier(trueFalseTruePublisher, defaultAsyncJob)
         let cancellable = retrier.attemptPublisher
             .sink(receiveCompletion: { _ in }, receiveValue: {
                 if case .failure(let error) = $0 {
@@ -77,18 +62,15 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
                     }
                 }
             })
-        wait(for: [expectationAttemptFailureReceived], timeout: 1)
+        wait(for: [expectationAttemptFailureReceived], timeout: defaultSequenceWaitingTime)
         cancellable.cancel()
     }
 
     @MainActor
     func test_publisher_receive_second_trial_success() async {
-        let job = {
-            try await Task.sleep(nanoseconds: nanoseconds(0.1))
-        }
         let expectationValueReceived = expectation(description: "Success received")
 
-        let retrier = buildRetrier(trueFalseTruePublisher, job)
+        let retrier = buildRetrier(trueFalseTruePublisher, defaultAsyncJob)
         let cancellable = retrier.attemptPublisher
             .sink(receiveCompletion: { _ in },
                   receiveValue: {
@@ -96,20 +78,19 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
                     expectationValueReceived.fulfill()
                 }
             })
-        await fulfillment(of: [expectationValueReceived], timeout: 0.3)
+        await fulfillment(of: [expectationValueReceived], timeout: defaultSequenceWaitingTime)
         cancellable.cancel()
     }
 
     func test_attempt_on_failure_propagated_during_second_trial() {
         var failedOnce = false
-        let ownError = NSError(domain: "domain", code: 8)
         var jobExecutionCount = 0
         let job = {
             jobExecutionCount += 1
-            try await Task.sleep(nanoseconds: nanoseconds(0.1))
+            try await taskWait()
             if !failedOnce {
                 failedOnce = true
-                throw ownError
+                throw defaultError
             }
         }
         let expectationOwnErrorPropagated = expectation(description: "Attempt own error propagated")
@@ -118,11 +99,11 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
         let cancellable = retrier.attemptPublisher
             .sink(receiveCompletion: { _ in },
                   receiveValue: {
-                if case .failure(let error) = $0, ownError.isEqual(error as NSError) {
+                if case .failure(let error) = $0, defaultError.isEqual(error as NSError) {
                     expectationOwnErrorPropagated.fulfill()
                 }
             })
-        wait(for: [expectationOwnErrorPropagated], timeout: 0.5)
+        wait(for: [expectationOwnErrorPropagated], timeout: defaultSequenceWaitingTime)
         cancellable.cancel()
     }
 

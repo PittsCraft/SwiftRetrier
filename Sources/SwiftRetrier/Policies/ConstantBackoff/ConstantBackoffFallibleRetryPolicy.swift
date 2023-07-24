@@ -2,12 +2,12 @@ import Foundation
 
 open class ConstantBackoffFallibleRetryPolicy: FallibleRetryPolicy {
     public let delay: TimeInterval
-    public let maxAttempts: Int
+    public let maxAttempts: UInt
     public let giveUpOn: (Error) -> Bool
     public let retryOn: (Error) -> Bool
 
     public init(delay: TimeInterval = 1,
-                maxAttempts: Int = Int.max,
+                maxAttempts: UInt = UInt.max,
                 giveUpOn: @escaping (Error) -> Bool = { _ in false },
                 retryOn: @escaping (Error) -> Bool = { _ in false }) {
         self.delay = delay

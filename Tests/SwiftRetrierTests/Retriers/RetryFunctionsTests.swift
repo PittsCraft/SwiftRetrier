@@ -7,21 +7,21 @@ class RetryFunctionsTests: XCTestCase {
     func testFallibleAttemptFailureHandlerCalled() {
         let expectation = expectation(description: "Attempt failure handler called")
         Task {
-            try await fallibleRetry(with: .constantBackoff(delay: 0.1, maxAttempts: 1),
-                                    job: { throw nsError },
+            try await fallibleRetry(with: .constantBackoff(delay: defaultRetryDelay, maxAttempts: 1),
+                                    job: immediateFailureJob,
                                     attemptFailureHandler: { _ in
                 expectation.fulfill()
             })
         }
-        wait(for: [expectation], timeout: 0.2)
+        wait(for: [expectation], timeout: defaultSequenceWaitingTime)
     }
 
     func testInfallibleAttemptFailureHandlerCalled() {
         let expectation = expectation(description: "Attempt failure handler called")
         let task = Task {
             var fulfilled = false
-            try await retry(with: .constantBackoff(delay: 0.1),
-                            job: { throw nsError },
+            try await retry(with: .testDefault(),
+                            job: immediateFailureJob,
                             attemptFailureHandler: { _ in
                 if !fulfilled {
                     expectation.fulfill()
@@ -29,32 +29,32 @@ class RetryFunctionsTests: XCTestCase {
                 }
             })
         }
-        wait(for: [expectation], timeout: 0.2)
+        wait(for: [expectation], timeout: defaultSequenceWaitingTime)
         task.cancel()
     }
 
     func testInfallibleRepeatSubscriptionCancellationPropagated() {
         _ = retry(repeatEvery: 0.1,
                   propagateSubscriptionCancellation: true,
-                  with: .constantBackoff(delay: 0.1),
+                  with: .testDefault(),
                   job: {
             DispatchQueue.main.sync {
                 XCTFail("Job should not be called")
             }
         })
         .sink(receiveCompletion: { _ in }, receiveValue: { _ in })
-        _ = XCTWaiter.wait(for: [expectation(description: "Wait for some time")], timeout: 0.15)
+        _ = XCTWaiter.wait(for: [expectation(description: "Wait for some time")], timeout: defaultSequenceWaitingTime)
     }
 
     func testFallibleRepeatSubscriptionCancellationPropagated() {
-        _ = fallibleRetry(repeatEvery: 0.1,
+        _ = fallibleRetry(repeatEvery: defaultRetryDelay,
                           propagateSubscriptionCancellation: true,
-                          with: .constantBackoff(delay: 0.05),
+                          with: .constantBackoff(delay: defaultWaitingTime),
                           job: {
             XCTFail("Job should not be called")
         })
         .sink(receiveCompletion: { _ in
         }, receiveValue: { _ in })
-        _ = XCTWaiter.wait(for: [expectation(description: "Wait for some time")], timeout: 0.15)
+        _ = XCTWaiter.wait(for: [expectation(description: "Wait for some time")], timeout: defaultSequenceWaitingTime)
     }
 }
