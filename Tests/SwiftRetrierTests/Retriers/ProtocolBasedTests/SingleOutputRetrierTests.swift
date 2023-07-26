@@ -23,7 +23,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         let retrier = buildRetrier(immediateSuccessJob)
         let expectation = expectation(description: "Finished received")
         let cancellable = retrier
-            .attemptPublisher
+            .publisher()
             .sink(receiveCompletion: { completion in
                 if case .finished = completion {
                     expectation.fulfill()
@@ -37,7 +37,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         let retrier = buildRetrier(immediateSuccessJob)
         let expectation = expectation(description: "Finished received")
         let cancellable = retrier
-            .attemptSuccessPublisher
+            .successPublisher()
             .sink(receiveCompletion: { completion in
                 if case .finished = completion {
                     expectation.fulfill()
@@ -56,7 +56,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
             }
         })
         let expectation = expectation(description: "Completes")
-        let cancellable = retrier.attemptPublisher
+        let cancellable = retrier.publisher()
             .sink(receiveCompletion: {
                 if case .finished = $0 {
                     expectation.fulfill()

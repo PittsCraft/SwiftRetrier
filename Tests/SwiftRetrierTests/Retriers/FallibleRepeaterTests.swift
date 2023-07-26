@@ -6,7 +6,7 @@ import XCTest
 class FallibleRepeater_RetrierTests: RetrierTests<FallibleRepeater<Void>> {
     override func setUp() {
         self.retrier = {
-            FallibleRepeater(repeatDelay: 100, policy: .testDefault(), job: $0)
+            FallibleRepeater(repeatDelay: 100, policy: Policy.testDefault(), job: $0)
         }
     }
 }
@@ -22,7 +22,7 @@ class FallibleRepeater_FallibleRetrierTests: FallibleRetrierTests<FallibleRepeat
 class FallibleRepeater_RepeaterTests: RepeaterTests<FallibleRepeater<Void>> {
     override func setUp() {
         self.retrier = {
-            FallibleRepeater(repeatDelay: $0, policy: .testDefault(), job: $1)
+            FallibleRepeater(repeatDelay: $0, policy: Policy.testDefault(), job: $1)
         }
     }
 }

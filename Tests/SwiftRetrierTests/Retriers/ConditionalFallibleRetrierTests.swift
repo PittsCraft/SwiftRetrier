@@ -6,7 +6,7 @@ import Combine
 class ConditionalFallibleRetrier_RetrierTests: RetrierTests<ConditionalFallibleRetrier<Void>> {
     override func setUp() {
         self.retrier = {
-            ConditionalFallibleRetrier(policy: .testDefault(),
+            ConditionalFallibleRetrier(policy: Policy.testDefault(),
                                        conditionPublisher: Just(true),
                                        job: $0)
         }
@@ -24,7 +24,7 @@ class ConditionalFallibleRetrier_FallibleRetrierTests: FallibleRetrierTests<Cond
 class ConditionalFallibleRetrier_SingleOutputRetrierTests: SingleOutputRetrierTests<ConditionalFallibleRetrier<Void>> {
     override func setUp() {
         retrier = {
-            ConditionalFallibleRetrier(policy: .testDefault(),
+            ConditionalFallibleRetrier(policy: Policy.testDefault(),
                                        conditionPublisher: Just(true),
                                        job: $0)
         }
@@ -43,7 +43,7 @@ class ConditionalFallibleRetrier_SingleOutputFallibleRetrierTests:
 class ConditionalFallibleRetrier_ConditionalRetrierTests: ConditionalRetrierTests<ConditionalFallibleRetrier<Void>> {
     override func setUp() {
         retrier = {
-            ConditionalFallibleRetrier(policy: .testDefault(),
+            ConditionalFallibleRetrier(policy: Policy.testDefault(),
                                        conditionPublisher: $0,
                                        job: $1)
         }

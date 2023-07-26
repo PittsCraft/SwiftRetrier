@@ -6,7 +6,7 @@ import XCTest
 class SimpleInfallibleRetrier_RetrierTests: RetrierTests<SimpleInfallibleRetrier<Void>> {
     override func setUp() {
         retrier = {
-            SimpleInfallibleRetrier(policy: .testDefault(), job: $0)
+            SimpleInfallibleRetrier(policy: Policy.testDefault(), job: $0)
         }
     }
 }
@@ -14,7 +14,7 @@ class SimpleInfallibleRetrier_RetrierTests: RetrierTests<SimpleInfallibleRetrier
 class SimpleInfallibleRetrier_SingleOutputRetrierTests: SingleOutputRetrierTests<SimpleInfallibleRetrier<Void>> {
     override func setUp() {
         retrier = {
-            SimpleInfallibleRetrier(policy: .testDefault(), job: $0)
+            SimpleInfallibleRetrier(policy: Policy.testDefault(), job: $0)
         }
     }
 }
