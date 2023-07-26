@@ -42,9 +42,9 @@ public class FallibleRepeater<Output>: Repeater, FallibleRetrier {
     }
 
     public convenience init<P>(
-        repeatDelay: TimeInterval,
         policy: FallibleRetryPolicy,
         conditionPublisher: P? = nil as AnyPublisher<Bool, Never>?,
+        repeatDelay: TimeInterval,
         job: @escaping Job<Output>
     ) where P: Publisher, P.Output == Bool, P.Failure == Never {
         if let conditionPublisher {

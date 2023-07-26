@@ -19,6 +19,6 @@ public extension ColdFallibleRepeater {
 
     @discardableResult
     func execute<Output>(_ job: @escaping Job<Output>) -> FallibleRepeater<Output> {
-        FallibleRepeater(repeatDelay: repeatDelay, policy: policy, job: job)
+        FallibleRepeater(policy: policy, repeatDelay: repeatDelay, job: job)
     }
 }

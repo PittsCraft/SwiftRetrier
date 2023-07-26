@@ -22,7 +22,7 @@ public func retrier<Value, P: Publisher<Bool, Never>>(
     repeatDelay: TimeInterval,
     job: @escaping Job<Value>
 ) -> FallibleRepeater<Value> {
-    FallibleRepeater(repeatDelay: repeatDelay, policy: policy, conditionPublisher: conditionPublisher, job: job)
+    FallibleRepeater(policy: policy, conditionPublisher: conditionPublisher, repeatDelay: repeatDelay, job: job)
 }
 
 // MARK: Infallible Retriers
