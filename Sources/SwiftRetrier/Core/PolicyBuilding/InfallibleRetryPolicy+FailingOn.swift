@@ -10,13 +10,4 @@ public extension InfallibleRetryPolicy {
             return attemptIndex >= maxAttempts - 1 || failureCriterium(lastError)
         })
     }
-
-    func repeating(withDelay repeatDelay: TimeInterval) -> ColdInfallibleRepeater {
-        ColdInfallibleRepeater(policy: self, repeatDelay: repeatDelay, conditionPublisher: nil)
-    }
-
-    @discardableResult
-    func execute<Output>(_ job: @escaping Job<Output>) -> SimpleInfallibleRetrier<Output> {
-        SimpleInfallibleRetrier(policy: self, job: job)
-    }
 }
