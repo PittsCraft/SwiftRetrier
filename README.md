@@ -35,6 +35,9 @@ jobs independently.
         // If you want to poll, well you can
         .repeating(withDelay: 30)
         .execute { try await fetchSomethingElse() }
+        
+    // You can always cancel hot retriers
+    fetcher.cancel()
 ```
 
 ## Combine publishers
@@ -83,6 +86,9 @@ If you don't repeat, you can wait for a single value in a concurrency context
     
 ```
 
+Note that you can use `cancellableValue` instead of value. In this case, if the task wrapping the concurrency context
+is cancelled, the underlying retrier will be cancelled.
+
 ## Without the main DSL
 
 ### `withRetries()` functions
@@ -101,6 +107,7 @@ Their first argument is the `policy`. It:
 let policy = Policy.exponentialBackoff().failingOn(maxAttempts: 12)
 let value = try await withRetries(policy: policy, job: { try await fetchSomething() })
 // You can add an extra `attemptFailureHandler` block to log attempt errors.
+// If the task executing the concurrency context is cancelled, the underlying retrier will be canceled.
 
 withRetries(policy: Policy.exponentialBackoff(), repeatDelay: 10, job: { try await fetchSomething() })
     .sink {
