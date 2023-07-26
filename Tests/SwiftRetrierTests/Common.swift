@@ -29,14 +29,12 @@ func taskWait(_ time: TimeInterval = defaultWaitingTime) async throws {
     try await Task.sleep(nanoseconds: nanoseconds(time))
 }
 
-extension FallibleRetryPolicyInstance {
-    static func testDefault(maxAttempts: UInt = UInt.max) -> FallibleRetryPolicyInstance {
-        .constantBackoff(delay: defaultRetryDelay, maxAttempts: maxAttempts)
+extension Policy {
+    static func testDefault(maxAttempts: UInt = UInt.max) -> FallibleRetryPolicy {
+        constantDelay(defaultRetryDelay).failingOn(maxAttempts: maxAttempts)
     }
-}
 
-extension InfallibleRetryPolicyInstance {
-    static func testDefault() -> InfallibleRetryPolicyInstance {
-        .constantBackoff(delay: defaultRetryDelay)
+    static func testDefault() -> InfallibleRetryPolicy {
+        constantDelay(defaultRetryDelay)
     }
 }

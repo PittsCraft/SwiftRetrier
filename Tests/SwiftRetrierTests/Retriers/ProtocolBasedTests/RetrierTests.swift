@@ -2,7 +2,7 @@ import Foundation
 import XCTest
 @testable import SwiftRetrier
 
-class RetrierTests<R: Retrier>: XCTestCase {
+class RetrierTests<R: BaseRetrier>: XCTestCase {
 
     var retrier: ((@escaping Job<Void>) -> R)!
 
@@ -24,7 +24,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         let retrier = buildRetrier({ throw defaultError })
         let expectation = expectation(description: "Failure received")
         let cancellable = retrier
-            .attemptPublisher
+            .publisher()
             .sink(receiveCompletion: { _ in }, receiveValue: {
                 if case .failure(let error) = $0, error as NSError == defaultError {
                     expectation.fulfill()
@@ -38,7 +38,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         let retrier = buildRetrier(immediateSuccessJob)
         let expectation = expectation(description: "Success received")
         let cancellable = retrier
-            .attemptPublisher
+            .publisher()
             .sink(receiveCompletion: { _ in }, receiveValue: {
                 if case .success = $0 {
                     expectation.fulfill()
@@ -58,7 +58,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         })
         let successExpectation = expectation(description: "Success received")
         var failureReceived = false
-        let cancellable = retrier.attemptPublisher
+        let cancellable = retrier.publisher()
             .sink(receiveCompletion: { _ in },
                   receiveValue: {
                 switch $0 {
@@ -86,7 +86,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
 
     func test_no_value_received_after_immediate_cancellation() {
         let retrier = buildRetrier(immediateSuccessJob)
-        let cancellable = retrier.attemptPublisher
+        let cancellable = retrier.publisher()
             .sink(receiveCompletion: { _ in },
                   receiveValue: { _ in
                 XCTFail("Should not receive value on immediate cancellation")
@@ -100,7 +100,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
     func test_finished_received_after_cancellation() {
         let failureExpectation = expectation(description: "Failure received")
         let retrier = buildRetrier(immediateSuccessJob)
-        let cancellable = retrier.attemptPublisher
+        let cancellable = retrier.publisher()
             .sink(receiveCompletion: {
                 if case .finished = $0 {
                     failureExpectation.fulfill()
