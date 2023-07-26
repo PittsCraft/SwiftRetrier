@@ -1,14 +1,14 @@
 import Foundation
 import Combine
 
-public protocol BaseRetrier: Cancellable, AnyObject {
+public protocol Retrier: Cancellable, AnyObject {
     associatedtype Output
     associatedtype Failure: Error
 
     func publisher() -> AnyPublisher<Result<Output, Error>, Failure>
 }
 
-public extension BaseRetrier {
+public extension Retrier {
 
     func publisher(propagateCancellation: Bool) -> AnyPublisher<Result<Output, Error>, Failure> {
         if propagateCancellation {

@@ -2,7 +2,7 @@ import Foundation
 import XCTest
 @testable import SwiftRetrier
 
-class RetrierTests<R: BaseRetrier>: XCTestCase {
+class RetrierTests<R: Retrier>: XCTestCase {
 
     var retrier: ((@escaping Job<Void>) -> R)!
 
