@@ -4,20 +4,20 @@ public func withExponentialBackoff(
     timeSlot: TimeInterval = ExponentialBackoffConstants.defaultTimeSlot,
     maxDelay: TimeInterval = ExponentialBackoffConstants.defaultMaxDelay,
     jitter: ExponentialBackoffInfallibleRetryPolicy.Jitter = ExponentialBackoffConstants.defaultJitter
-) -> Retrier {
+) -> ColdInfallibleRetrier {
     let policy = ExponentialBackoffInfallibleRetryPolicy(timeSlot: timeSlot,
                                                          maxDelay: maxDelay,
                                                          jitter: jitter)
-    return Retrier(policy: policy, conditionPublisher: nil)
+    return ColdInfallibleRetrier(policy: policy, conditionPublisher: nil)
 }
 
 public func withConstantDelay(
     _ delay: TimeInterval = ConstantBackoffConstants.defaultDelay
-) -> Retrier {
+) -> ColdInfallibleRetrier {
     let policy = ConstantBackoffInfallibleRetryPolicy(delay: delay)
-    return Retrier(policy: policy, conditionPublisher: nil)
+    return ColdInfallibleRetrier(policy: policy, conditionPublisher: nil)
 }
 
-public func withNoDelay() -> Retrier {
+public func withNoDelay() -> ColdInfallibleRetrier {
     withConstantDelay(0)
 }

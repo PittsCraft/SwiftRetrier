@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-public protocol SingleOutputRetrier: BaseRetrier {
+public protocol SingleOutputRetrier: Retrier {
 
     var value: Output { get async throws }
 }

@@ -2,7 +2,7 @@ import XCTest
 @testable import SwiftRetrier
 import Combine
 
-class ConditionalRetrierTests<R: BaseRetrier>: XCTestCase {
+class ConditionalRetrierTests<R: Retrier>: XCTestCase {
 
     var retrier: ((AnyPublisher<Bool, Never>, @escaping Job<Void>) -> R)!
 

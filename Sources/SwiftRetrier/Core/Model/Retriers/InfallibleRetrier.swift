@@ -1,4 +1,4 @@
 import Foundation
 import Combine
 
-public protocol InfallibleRetrier: BaseRetrier where Failure == Never {}
+public protocol InfallibleRetrier: Retrier where Failure == Never {}

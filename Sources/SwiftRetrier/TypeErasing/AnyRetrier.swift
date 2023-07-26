@@ -1,17 +1,17 @@
 import Foundation
 import Combine
 
-public class AnyRetrier<Output, Failure: Error>: BaseRetrier {
+public class AnyRetrier<Output, Failure: Error>: Retrier {
 
     public let publisherBlock: () -> AnyPublisher<Result<Output, Error>, Failure>
     private let cancelBlock: () -> Void
 
-    public init<R>(_ retrier: R) where R: BaseRetrier, R.Output == Output, R.Failure == Failure {
+    public init<R>(_ retrier: R) where R: Retrier, R.Output == Output, R.Failure == Failure {
         self.publisherBlock = retrier.publisher
         self.cancelBlock = retrier.cancel
     }
 
-    public init<R>(_ retrier: R) where R: BaseRetrier, R.Output == Output, R.Failure == Never {
+    public init<R>(_ retrier: R) where R: Retrier, R.Output == Output, R.Failure == Never {
         self.publisherBlock = {
             retrier.publisher()
                 .setFailureType(to: Failure.self)
@@ -29,7 +29,7 @@ public class AnyRetrier<Output, Failure: Error>: BaseRetrier {
     }
 }
 
-extension BaseRetrier {
+extension Retrier {
     public func eraseToAnyRetrier() -> AnyRetrier<Output, Failure> {
         AnyRetrier<Output, Failure>(self)
     }

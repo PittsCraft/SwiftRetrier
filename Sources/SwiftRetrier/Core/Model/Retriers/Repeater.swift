@@ -1,1 +1,1 @@
-protocol Repeater: BaseRetrier {}
+protocol Repeater: Retrier {}

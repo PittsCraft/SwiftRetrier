@@ -1,12 +1,12 @@
 import Foundation
 import Combine
 
-public struct Retrier {
+public struct ColdInfallibleRetrier {
     let policy: InfallibleRetryPolicy
     let conditionPublisher: AnyPublisher<Bool, Never>?
 }
 
-public extension Retrier {
+public extension ColdInfallibleRetrier {
 
     func failingOn(
         maxAttempts: UInt = UInt.max,
@@ -18,9 +18,9 @@ public extension Retrier {
 
     func onlyWhen<P>(
         _ conditionPublisher: P
-    ) -> Retrier where P: Publisher, P.Output == Bool, P.Failure == Never {
-        Retrier(policy: policy,
-                conditionPublisher: conditionPublisher.eraseToAnyPublisher())
+    ) -> ColdInfallibleRetrier where P: Publisher, P.Output == Bool, P.Failure == Never {
+        ColdInfallibleRetrier(policy: policy,
+                              conditionPublisher: conditionPublisher.eraseToAnyPublisher())
     }
 
     func repeating(withDelay repeatDelay: TimeInterval) -> ColdInfallibleRepeater {
