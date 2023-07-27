@@ -1,7 +1,7 @@
 import Foundation
 
 public protocol FallibleRetryPolicy {
-    func shouldRetry(attemptIndex: UInt, lastError: Error) -> FallibleRetryDecision
-    func retryDelay(attemptIndex: UInt, lastError: Error) -> TimeInterval
+    func shouldRetry(on attemptFailure: AttemptFailure) -> FallibleRetryDecision
+    func retryDelay(for attemptFailure: AttemptFailure) -> TimeInterval
     func freshFallibleCopy() -> FallibleRetryPolicy
 }

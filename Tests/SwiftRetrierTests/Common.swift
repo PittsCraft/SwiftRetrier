@@ -31,7 +31,7 @@ func taskWait(_ time: TimeInterval = defaultWaitingTime) async throws {
 
 extension Policy {
     static func testDefault(maxAttempts: UInt = UInt.max) -> FallibleRetryPolicy {
-        constantDelay(defaultRetryDelay).failingOn(maxAttempts: maxAttempts)
+        constantDelay(defaultRetryDelay).giveUpAfter(maxAttempts: maxAttempts)
     }
 
     static func testDefault() -> InfallibleRetryPolicy {

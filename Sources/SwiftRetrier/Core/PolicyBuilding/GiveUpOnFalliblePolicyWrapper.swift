@@ -1,28 +1,27 @@
 import Foundation
 
-public class ToFallibleRetryPolicyWrapper: FallibleRetryPolicy {
+public struct GiveUpOnFalliblePolicyWrapper: FallibleRetryPolicy {
 
-    private let wrapped: InfallibleRetryPolicy
+    private let wrapped: FallibleRetryPolicy
     private let giveUpCriterium: (AttemptFailure) -> Bool
 
-    public init(wrapped: InfallibleRetryPolicy,
-                giveUpCriterium: @escaping (AttemptFailure) -> Bool = { _ in false }) {
+    public init(wrapped: FallibleRetryPolicy, giveUpCriterium: @escaping (AttemptFailure) -> Bool) {
         self.wrapped = wrapped
         self.giveUpCriterium = giveUpCriterium
     }
 
     public func retryDelay(for attemptFailure: AttemptFailure) -> TimeInterval {
-        wrapped.retryDelay(for: attemptFailure)
+        self.wrapped.retryDelay(for: attemptFailure)
     }
 
     public func shouldRetry(on attemptFailure: AttemptFailure) -> FallibleRetryDecision {
         guard !giveUpCriterium(attemptFailure) else {
             return .giveUp
         }
-        return .retry(delay: wrapped.retryDelay(for: attemptFailure))
+        return wrapped.shouldRetry(on: attemptFailure)
     }
 
     public func freshFallibleCopy() -> FallibleRetryPolicy {
-        ToFallibleRetryPolicyWrapper(wrapped: wrapped.freshInfallibleCopy(), giveUpCriterium: giveUpCriterium)
+        GiveUpOnFalliblePolicyWrapper(wrapped: wrapped.freshFallibleCopy(), giveUpCriterium: giveUpCriterium)
     }
 }

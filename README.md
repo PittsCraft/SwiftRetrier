@@ -12,13 +12,15 @@
         // Fetch only when you've got network and your user is authenticated for example
         .onlyWhen(conditionPublisher)
         // Ensure your retrier fails on some conditions
-        .failingOn(maxAttempts: 10, errorMatching: {
+        .giveUpAfter(maxAttempts: 10)
+        .giveUpOnErrors(matching: {
             $0 is MyFatalError
         })
-        // Ensure your retrier won't give up on some errors (takes precedence over failingOn())
-        .retryingOn(errorMatching: {
+        // Ensure your retrier won't give up on some errors
+        .retryOnErrors(matching: {
             $0 is MyTmpError
         })
+        // All giveUp / retry modifiers are evaluated in reversed order.
 ```
 
 [Exponential backoff](https://aws.amazon.com/fr/blogs/architecture/exponential-backoff-and-jitter/) with
@@ -30,11 +32,14 @@ You can chain a call to `execute { try await job() }`, but you can also reuse an
 jobs independently.
 
 ```swift  
-    let fetcher = coldRetrier.execute { try await fetchSomething() }
+    let fetcher = coldRetrier { 
+        try await fetchSomething() 
+    }
     let poller = coldRetrier
         // If you want to poll, well you can
-        .repeating(withDelay: 30)
-        .execute { try await fetchSomethingElse() }
+        .repeating(withDelay: 30) { 
+            try await fetchSomethingElse() 
+        }
         
     // You can always cancel hot retriers
     fetcher.cancel()
@@ -43,7 +48,7 @@ jobs independently.
 ## Combine publishers
 
 All retriers (including repeaters) expose Combine publishers that publish all attempts results.
-- Note that if you don't use `failingOn()` then you can `sink()` without handling the completion.
+- Note that if you don't use `giveUp*()` functions then you can `sink()` without handling the completion.
 - There are `successPublisher()` and `failurePublisher()` shortcuts.
 - You can use `publisher(propagateCancellation: true)` to cancel the retrier when you're done listening to it.
 
@@ -72,15 +77,18 @@ If you don't repeat, you can wait for a single value in a concurrency context
 
 ```swift
      func fetchValue() async throws -> Value {
-        // This will throw if you cancel the retrier or if `failingOn()` matches
+        // This will throw if you cancel the retrier or if any `giveUp*()` function matches
         try await withExponentialBackoff() 
             .onlyWhen(conditionPublisher)
-            .failingOn(maxAttempts: 10, errorMatching: {
+            .giveUpAfter(maxAttempts: 10)
+            .giveUpOnErrors(matching: {
                 $0 is MyFatalError
             })
-            .retryingOn(errorMatching: {
+            .retryOnErrors(matching: {
                 $0 is MyTmpError
-            })
+            }) {
+                try await api.fetchValue()
+            }
             .value
     }
     
@@ -100,11 +108,11 @@ In this case you can use the `withRetries()` functions.
 
 Their first argument is the `policy`. It:
 - handles delays and failure criteria
-- defaults `Policy.exponentialBackoff()`
+- defaults to `Policy.exponentialBackoff()`
 - can be built using the `Policy` entry point
 
 ```swift
-let policy = Policy.exponentialBackoff().failingOn(maxAttempts: 12)
+let policy = Policy.exponentialBackoff().giveUpAfter(maxAttempts: 12)
 let value = try await withRetries(policy: policy, job: { try await fetchSomething() })
 // You can add an extra `attemptFailureHandler` block to log attempt errors.
 // If the task executing the concurrency context is cancelled, the underlying retrier will be canceled.
@@ -138,12 +146,13 @@ and `InfallibleRepeater`.
     - their policy gives up
     - the job succeeds
     - the retrier is cancelled
+    - their conditionPublisher ends after having published no value or `false` as its last value
 - When a policy gives up, the last job error is thrown on any `try await retrier.value`, and also embedded into 
 publishers failure.
 - Retriers publishers emit only on `DispatchQueue.main`.
 - When cancelled, the retrier publishers emit a `.finished` completion and no intermediary attempt result.
-- All retriers start their tasks immediately on initialization, and wait for the current main queue cycle to end before
- executing jobs. This way, if a retrier is created on main queue and cancelled in the same cycle, it's guaranteed 
+- All retriers start their tasks immediately on initialization, and just wait for the current main queue cycle to end
+ before executing jobs. This way, if a retrier is created on main queue and cancelled in the same cycle, it's guaranteed 
  to not execute the job even once.
 - You can create and cancel retriers on a different `DispatchQueue` or even in an asynchronous context. But in this 
 case, guarantees such as the previous one are no longer valid.
@@ -173,16 +182,22 @@ You can especially choose the jitter type between `none`, `full` (default) and `
 **No delay** policy is a constant delay policy with a `0` delay.
 
 In a fallible context, you can add failure conditions using 
-`failingOn(maxAttempts: UInt, errorMatching: @escaping (Error) -> Bool)`, and bypass these conditions using 
-`retryingOn(errorMatching: @escaping (Error) -> Bool)`.
+`giveUp*()` functions, and bypass these conditions using `retry*()` functions.
 
-If an error has `retryOn(error) == true`, then the other checks are ignored.
+All giveUp / retry modifiers are evaluated in reversed order.
 
 ### Home made policy
 
-You can create your own policies that conform `InfallibleRetryPolicy` and they will benefit from the same failure
- configuration options.
+You can create your own policies that conform `InfallibleRetryPolicy` and they will benefit from the same modifiers.
 
+To create a DSL entry point using your policy:
+
+```swift
+public func withMyOwnPolicy() -> ColdInfallibleRetrier {
+    let policy = MyOwnPolicy()
+    return ColdInfallibleRetrier(policy: policy, conditionPublisher: nil)
+}
+```
 
 ## Contribute
 

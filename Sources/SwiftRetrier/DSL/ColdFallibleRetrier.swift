@@ -8,20 +8,39 @@ public struct ColdFallibleRetrier {
 
 public extension ColdFallibleRetrier {
 
+    func giveUp(on giveUpCriterium: @escaping (AttemptFailure) -> Bool) -> ColdFallibleRetrier {
+        let policy = policy.giveUp(on: giveUpCriterium)
+        return ColdFallibleRetrier(policy: policy, conditionPublisher: conditionPublisher)
+    }
+
+    func giveUpAfter(maxAttempts: UInt) -> ColdFallibleRetrier {
+        let policy = policy.giveUpAfter(maxAttempts: maxAttempts)
+        return ColdFallibleRetrier(policy: policy, conditionPublisher: conditionPublisher)
+    }
+
+    func giveUpOnErrors(matching finalErrorCriterium: @escaping (Error) -> Bool) -> ColdFallibleRetrier {
+        let policy = policy.giveUpOnErrors(matching: finalErrorCriterium)
+        return ColdFallibleRetrier(policy: policy, conditionPublisher: conditionPublisher)
+    }
+
+    func retry(on retryCriterium: @escaping (AttemptFailure) -> Bool) -> ColdFallibleRetrier {
+        let policy = RetryOnFalliblePolicyWrapper(wrapped: policy, retryCriterium: retryCriterium)
+        return ColdFallibleRetrier(policy: policy, conditionPublisher: conditionPublisher)
+    }
+
+    func retryOnErrors(matching retryCriterium: @escaping (Error) -> Bool) -> ColdFallibleRetrier {
+        retry(on: { retryCriterium($0.error) })
+    }
+
     func onlyWhen<P>(
         _ conditionPublisher: P
     ) -> ColdFallibleRetrier where P: Publisher, P.Output == Bool, P.Failure == Never {
         ColdFallibleRetrier(policy: policy,
-                            conditionPublisher: conditionPublisher.eraseToAnyPublisher())
+                            conditionPublisher: conditionPublisher.combineWith(condition: self.conditionPublisher))
     }
 
-    func repeating(withDelay repeatDelay: TimeInterval) -> ColdFallibleRepeater {
+    func `repeat`(withDelay repeatDelay: TimeInterval) -> ColdFallibleRepeater {
         ColdFallibleRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
-    }
-
-    func retryingOn(errorMatching retryCriterium: @escaping (Error) -> Bool) -> ColdFallibleRetrier {
-        let policy = RetryingOnFalliblePolicyWrapper(wrapped: policy, retryCriterium: retryCriterium)
-        return ColdFallibleRetrier(policy: policy, conditionPublisher: conditionPublisher)
     }
 
     @discardableResult
@@ -31,5 +50,10 @@ public extension ColdFallibleRetrier {
                 .eraseToAnySingleOutputFallibleRetrier()
         }
         return SimpleFallibleRetrier(policy: policy, job: job).eraseToAnySingleOutputFallibleRetrier()
+    }
+
+    @discardableResult
+    func callAsFunction<Output>(_ job: @escaping Job<Output>) -> AnySingleOutputFallibleRetrier<Output> {
+        execute(job)
     }
 }

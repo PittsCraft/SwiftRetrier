@@ -8,11 +8,18 @@ public struct ColdInfallibleRetrier {
 
 public extension ColdInfallibleRetrier {
 
-    func failingOn(
-        maxAttempts: UInt = UInt.max,
-        errorMatching failureCriterium: @escaping (Error) -> Bool = { _ in false }
-    ) -> ColdFallibleRetrier {
-        let policy = policy.failingOn(maxAttempts: maxAttempts, errorMatching: failureCriterium)
+    func giveUp(on giveUpCriterium: @escaping (AttemptFailure) -> Bool) -> ColdFallibleRetrier {
+        let policy = policy.giveUp(on: giveUpCriterium)
+        return ColdFallibleRetrier(policy: policy, conditionPublisher: conditionPublisher)
+    }
+
+    func giveUpAfter(maxAttempts: UInt) -> ColdFallibleRetrier {
+        let policy = policy.giveUpAfter(maxAttempts: maxAttempts)
+        return ColdFallibleRetrier(policy: policy, conditionPublisher: conditionPublisher)
+    }
+
+    func giveUpOnErrors(matching finalErrorCriterium: @escaping (Error) -> Bool) -> ColdFallibleRetrier {
+        let policy = policy.giveUpOnErrors(matching: finalErrorCriterium)
         return ColdFallibleRetrier(policy: policy, conditionPublisher: conditionPublisher)
     }
 
@@ -20,15 +27,20 @@ public extension ColdInfallibleRetrier {
         _ conditionPublisher: P
     ) -> ColdInfallibleRetrier where P: Publisher, P.Output == Bool, P.Failure == Never {
         ColdInfallibleRetrier(policy: policy,
-                              conditionPublisher: conditionPublisher.eraseToAnyPublisher())
+                              conditionPublisher: conditionPublisher.combineWith(condition: self.conditionPublisher))
     }
 
-    func repeating(withDelay repeatDelay: TimeInterval) -> ColdInfallibleRepeater {
+    func `repeat`(withDelay repeatDelay: TimeInterval) -> ColdInfallibleRepeater {
         ColdInfallibleRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
     }
 
     @discardableResult
     func execute<Output>(_ job: @escaping Job<Output>) -> AnySingleOutputInfallibleRetrier<Output> {
         retrier(policy: policy, conditionPublisher: conditionPublisher, job: job)
+    }
+
+    @discardableResult
+    func callAsFunction<Output>(_ job: @escaping Job<Output>) -> AnySingleOutputInfallibleRetrier<Output> {
+        execute(job)
     }
 }

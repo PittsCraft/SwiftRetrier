@@ -60,7 +60,7 @@ public class SimpleFallibleRetrier<Output>: SingleOutputFallibleRetrier {
                         await sendAttemptFailure(error)
                         try Task.checkCancellation()
                         let retryDecision = await MainActor.run { [attemptIndex] in
-                            policy.shouldRetry(attemptIndex: attemptIndex, lastError: error)
+                            policy.shouldRetry(on: AttemptFailure(index: attemptIndex, error: error))
                         }
                         switch retryDecision {
                         case .giveUp:
