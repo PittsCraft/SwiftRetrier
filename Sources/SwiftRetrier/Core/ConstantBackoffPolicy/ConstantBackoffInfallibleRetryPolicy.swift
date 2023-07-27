@@ -8,7 +8,7 @@ open class ConstantBackoffInfallibleRetryPolicy: InfallibleRetryPolicy {
         self.delay = delay
     }
 
-    public func retryDelay(attemptIndex: UInt, lastError: Error) -> TimeInterval {
+    public func retryDelay(for attemptFailure: AttemptFailure) -> TimeInterval {
         delay
     }
 

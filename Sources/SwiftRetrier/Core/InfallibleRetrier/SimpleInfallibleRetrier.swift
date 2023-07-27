@@ -31,8 +31,8 @@ public class SimpleInfallibleRetrier<Output>: SingleOutputInfallibleRetrier {
     }
 
     @MainActor
-    private func delay(attemptIndex: UInt, lastError: Error) -> TimeInterval {
-        policy.retryDelay(attemptIndex: attemptIndex, lastError: lastError)
+    private func delay(attemptIndex: UInt, error: Error) -> TimeInterval {
+        policy.retryDelay(for: AttemptFailure(index: attemptIndex, error: error))
     }
 
     @MainActor
@@ -57,7 +57,7 @@ public class SimpleInfallibleRetrier<Output>: SingleOutputInfallibleRetrier {
                         throw CancellationError()
                     }
                     await sendAttemptFailure(error)
-                    let delay = await delay(attemptIndex: attemptIndex, lastError: error)
+                    let delay = await delay(attemptIndex: attemptIndex, error: error)
                     do {
                         try await Task.sleep(nanoseconds: nanoseconds(delay))
                     } catch {}

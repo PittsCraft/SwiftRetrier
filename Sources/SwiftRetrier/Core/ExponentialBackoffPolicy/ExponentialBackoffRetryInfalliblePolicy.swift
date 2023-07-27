@@ -72,8 +72,8 @@ open class ExponentialBackoffInfallibleRetryPolicy: InfallibleRetryPolicy {
         }
     }
 
-    open func retryDelay(attemptIndex: UInt, lastError: Error) -> TimeInterval {
-        min(maxDelay, uncappedDelay(attemptIndex: attemptIndex))
+    open func retryDelay(for attemptFailure: AttemptFailure) -> TimeInterval {
+        min(maxDelay, uncappedDelay(attemptIndex: attemptFailure.index))
     }
 
     public func freshInfallibleCopy() -> InfallibleRetryPolicy {

@@ -9,7 +9,7 @@ class WithRetriesFunctionsTests: XCTestCase {
         Task {
             let policy = Policy
                 .testDefault()
-                .failingOn(maxAttempts: 1)
+                .giveUpAfter(maxAttempts: 1)
             try await withRetries(policy: policy,
                                   attemptFailureHandler: { _ in
                 expectation.fulfill()

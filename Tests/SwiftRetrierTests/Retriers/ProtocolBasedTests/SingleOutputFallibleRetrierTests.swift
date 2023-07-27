@@ -21,7 +21,7 @@ class SingleOutputFallibleRetrierTests<R: SingleOutputFallibleRetrier>: XCTestCa
 
     @MainActor
     func test_async_value_throws_on_trial_failure() async {
-        let retrier = buildRetrier(Policy.constantDelay().failingOn(maxAttempts: 1), immediateFailureJob)
+        let retrier = buildRetrier(Policy.constantDelay().giveUpAfter(maxAttempts: 1), immediateFailureJob)
         do {
             _ = try await retrier.value
             XCTFail("Unexpected success")
