@@ -1,50 +1,24 @@
 import Foundation
 import Combine
 
-// MARK: Fallible Retriers
-
 public func retrier<Value, P: Publisher<Bool, Never>>(
-    policy: FallibleRetryPolicy,
+    policy: RetryPolicy = Policy.exponentialBackoff(),
     conditionPublisher: P? = nil as AnyPublisher<Bool, Never>?,
     job: @escaping Job<Value>
-) -> AnySingleOutputFallibleRetrier<Value> {
+) -> AnySingleOutputRetrier<Value> {
     if let conditionPublisher {
-        return ConditionalFallibleRetrier(policy: policy, conditionPublisher: conditionPublisher, job: job)
-            .eraseToAnySingleOutputFallibleRetrier()
+        return ConditionalRetrier(policy: policy, conditionPublisher: conditionPublisher, job: job)
+            .eraseToAnySingleOutputRetrier()
     }
-    return SimpleFallibleRetrier(policy: policy, job: job)
-        .eraseToAnySingleOutputFallibleRetrier()
+    return SimpleRetrier(policy: policy, job: job)
+        .eraseToAnySingleOutputRetrier()
 }
 
 public func retrier<Value, P: Publisher<Bool, Never>>(
-    policy: FallibleRetryPolicy,
+    policy: RetryPolicy = Policy.exponentialBackoff(),
     conditionPublisher: P? = nil as AnyPublisher<Bool, Never>?,
     repeatDelay: TimeInterval,
     job: @escaping Job<Value>
-) -> FallibleRepeater<Value> {
-    FallibleRepeater(policy: policy, conditionPublisher: conditionPublisher, repeatDelay: repeatDelay, job: job)
-}
-
-// MARK: Infallible Retriers
-
-public func retrier<Value, P: Publisher<Bool, Never>>(
-    policy: InfallibleRetryPolicy = Policy.exponentialBackoff(),
-    conditionPublisher: P? = nil as AnyPublisher<Bool, Never>?,
-    job: @escaping Job<Value>
-) -> AnySingleOutputInfallibleRetrier<Value> {
-    if let conditionPublisher {
-        return ConditionalInfallibleRetrier(policy: policy, conditionPublisher: conditionPublisher, job: job)
-            .eraseToAnySingleOutputInfallibleRetrier()
-    }
-    return SimpleInfallibleRetrier(policy: policy, job: job)
-        .eraseToAnySingleOutputInfallibleRetrier()
-}
-
-public func retrier<Value, P: Publisher<Bool, Never>>(
-    policy: InfallibleRetryPolicy = Policy.exponentialBackoff(),
-    conditionPublisher: P? = nil as AnyPublisher<Bool, Never>?,
-    repeatDelay: TimeInterval,
-    job: @escaping Job<Value>
-) -> InfallibleRepeater<Value> {
-    InfallibleRepeater(policy: policy, conditionPublisher: conditionPublisher, repeatDelay: repeatDelay, job: job)
+) -> SimpleRepeater<Value> {
+    SimpleRepeater(policy: policy, conditionPublisher: conditionPublisher, repeatDelay: repeatDelay, job: job)
 }

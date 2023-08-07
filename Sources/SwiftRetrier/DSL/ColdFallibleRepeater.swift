@@ -1,53 +1,53 @@
 import Foundation
 import Combine
 
-public struct ColdFallibleRepeater {
-    let policy: FallibleRetryPolicy
+public struct ColdRepeater {
+    let policy: RetryPolicy
     let repeatDelay: TimeInterval
     let conditionPublisher: AnyPublisher<Bool, Never>?
 }
 
-public extension ColdFallibleRepeater {
+public extension ColdRepeater {
 
-    func giveUp(on giveUpCriterium: @escaping (AttemptFailure) -> Bool) -> ColdFallibleRepeater {
+    func giveUp(on giveUpCriterium: @escaping (AttemptFailure) -> Bool) -> ColdRepeater {
         let policy = policy.giveUp(on: giveUpCriterium)
-        return ColdFallibleRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
+        return ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
     }
 
-    func giveUpAfter(maxAttempts: UInt) -> ColdFallibleRepeater {
+    func giveUpAfter(maxAttempts: UInt) -> ColdRepeater {
         let policy = policy.giveUpAfter(maxAttempts: maxAttempts)
-        return ColdFallibleRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
+        return ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
     }
 
-    func giveUpOnErrors(matching finalErrorCriterium: @escaping (Error) -> Bool) -> ColdFallibleRepeater {
+    func giveUpOnErrors(matching finalErrorCriterium: @escaping (Error) -> Bool) -> ColdRepeater {
         let policy = policy.giveUpOnErrors(matching: finalErrorCriterium)
-        return ColdFallibleRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
+        return ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
     }
 
-    func retry(on retryCriterium: @escaping (AttemptFailure) -> Bool) -> ColdFallibleRepeater {
-        let policy = RetryOnFalliblePolicyWrapper(wrapped: policy, retryCriterium: retryCriterium)
-        return ColdFallibleRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
+    func retry(on retryCriterium: @escaping (AttemptFailure) -> Bool) -> ColdRepeater {
+        let policy = RetryOnPolicyWrapper(wrapped: policy, retryCriterium: retryCriterium)
+        return ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
     }
 
-    func retryOnErrors(matching retryCriterium: @escaping (Error) -> Bool) -> ColdFallibleRepeater {
+    func retryOnErrors(matching retryCriterium: @escaping (Error) -> Bool) -> ColdRepeater {
         retry(on: { retryCriterium($0.error) })
     }
 
     func onlyWhen<P>(
         _ conditionPublisher: P
-    ) -> ColdFallibleRepeater where P: Publisher, P.Output == Bool, P.Failure == Never {
-        ColdFallibleRepeater(policy: policy,
-                             repeatDelay: repeatDelay,
-                             conditionPublisher: conditionPublisher.combineWith(condition: self.conditionPublisher))
+    ) -> ColdRepeater where P: Publisher, P.Output == Bool, P.Failure == Never {
+        ColdRepeater(policy: policy,
+                     repeatDelay: repeatDelay,
+                     conditionPublisher: conditionPublisher.combineWith(condition: self.conditionPublisher))
     }
 
     @discardableResult
-    func execute<Output>(_ job: @escaping Job<Output>) -> FallibleRepeater<Output> {
-        FallibleRepeater(policy: policy, repeatDelay: repeatDelay, job: job)
+    func execute<Output>(_ job: @escaping Job<Output>) -> SimpleRepeater<Output> {
+        SimpleRepeater(policy: policy, repeatDelay: repeatDelay, job: job)
     }
 
     @discardableResult
-    func callAsFunction<Output>(_ job: @escaping Job<Output>) -> FallibleRepeater<Output> {
+    func callAsFunction<Output>(_ job: @escaping Job<Output>) -> SimpleRepeater<Output> {
         execute(job)
     }
 }

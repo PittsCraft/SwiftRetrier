@@ -3,21 +3,21 @@ import Foundation
 public func withExponentialBackoff(
     timeSlot: TimeInterval = ExponentialBackoffConstants.defaultTimeSlot,
     maxDelay: TimeInterval = ExponentialBackoffConstants.defaultMaxDelay,
-    jitter: ExponentialBackoffInfallibleRetryPolicy.Jitter = ExponentialBackoffConstants.defaultJitter
-) -> ColdInfallibleRetrier {
-    let policy = ExponentialBackoffInfallibleRetryPolicy(timeSlot: timeSlot,
+    jitter: ExponentialBackoffRetryPolicy.Jitter = ExponentialBackoffConstants.defaultJitter
+) -> ColdRetrier {
+    let policy = ExponentialBackoffRetryPolicy(timeSlot: timeSlot,
                                                          maxDelay: maxDelay,
                                                          jitter: jitter)
-    return ColdInfallibleRetrier(policy: policy, conditionPublisher: nil)
+    return ColdRetrier(policy: policy, conditionPublisher: nil)
 }
 
 public func withConstantDelay(
-    _ delay: TimeInterval = ConstantBackoffConstants.defaultDelay
-) -> ColdInfallibleRetrier {
-    let policy = ConstantBackoffInfallibleRetryPolicy(delay: delay)
-    return ColdInfallibleRetrier(policy: policy, conditionPublisher: nil)
+    _ delay: TimeInterval = ConstantDelayConstants.defaultDelay
+) -> ColdRetrier {
+    let policy = ConstantDelayRetryPolicy(delay: delay)
+    return ColdRetrier(policy: policy, conditionPublisher: nil)
 }
 
-public func withNoDelay() -> ColdInfallibleRetrier {
+public func withNoDelay() -> ColdRetrier {
     withConstantDelay(0)
 }

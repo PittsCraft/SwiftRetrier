@@ -1,6 +1,6 @@
 import Foundation
 
-public enum FallibleRetryDecision {
+public enum RetryDecision {
     case giveUp
     case retry(delay: TimeInterval)
 }

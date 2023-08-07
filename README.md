@@ -47,28 +47,25 @@ jobs independently.
 
 ## Combine publishers
 
-All retriers (including repeaters) expose Combine publishers that publish all attempts results.
-- Note that if you don't use `giveUp*()` functions then you can `sink()` without handling the completion.
-- There are `successPublisher()` and `failurePublisher()` shortcuts.
+All retriers (including repeaters) expose Combine publishers that publish relevant events.
+- The publishers never fail, meaning their completion is always `.finished` and you can `sink {}` without handling 
+the completion
+- Instead, `attemptFailure`, `attemptSuccess` and `completion` events are materialized and sent as values.
+- There are `successPublisher()`, `failurePublisher()` and `completionPublisher()` shortcuts.
 - You can use `publisher(propagateCancellation: true)` to cancel the retrier when you're done listening to it.
 
 ```swift
-    let cancellable = poller.publisher
-        .sink(receiveCompletion: {
+    let cancellable = poller.publisher()
+        .sink {
             switch $0 {
-                case .finished:
-                    print("Polling finished because it was canceled")
-                case .failure(let error):
-                    print("Polling failed definitely, last error: \(error)")
-            }
-        }, receiveValue: {
-            switch $0 {
-                case .success(let value):
+                case .attemptSuccess(let value):
                     print("Fetched something: \(value)")
-                case .failure(let error):
-                    print("An attempt failed with \($0)")
+                case .attemptFailure(let failure):
+                    print("An attempt #\(failure.index) failed with \(failure.error)")
+                case .completion(let error):
+                    print("Poller completed with \(error?.localizedDescription ?? "no error")")
             }
-        })
+        }
 ```
 
 ## Await value in concurrency context
@@ -118,6 +115,7 @@ let value = try await withRetries(policy: policy, job: { try await fetchSomethin
 // If the task executing the concurrency context is cancelled, the underlying retrier will be canceled.
 
 withRetries(policy: Policy.exponentialBackoff(), repeatDelay: 10, job: { try await fetchSomething() })
+    .success() // If you're not interested in all events, just use .success()
     .sink {
         print("Got a value: \($0), let's rest 10s now")
     }
@@ -134,9 +132,8 @@ the same arguments as `withRetries()` but they return an executing retrier.
 
 ### Actual retrier classes
 
-Finally, you can also use the classes initializers directly, namely `SimpleInfallibleRetrier`, 
-`ConditionalInfallibleRetrier`, `InfallibleRepeater`, `SimpleFallibleRetrier`, `ConditionalFallibleRetrier` 
-and `InfallibleRepeater`.
+Finally, you can also use the classes initializers directly, namely `SimpleRetrier`, 
+`ConditionalRetrier` and `SimpleRepeater`.
 
 
 ## Retriers contract
@@ -144,13 +141,14 @@ and `InfallibleRepeater`.
 - All retriers are cancellable.
 - Retriers retry until either:
     - their policy gives up
-    - the job succeeds
+    - the job succeeds (except for repeaters that will delay another trial)
     - the retrier is cancelled
     - their conditionPublisher ends after having published no value or `false` as its last value
 - When a policy gives up, the last job error is thrown on any `try await retrier.value`, and also embedded into 
-publishers failure.
+a `RetrierEvent.completion`.
 - Retriers publishers emit only on `DispatchQueue.main`.
-- When cancelled, the retrier publishers emit a `.finished` completion and no intermediary attempt result.
+- When cancelled, the retrier publishers emit a `RetrierEvent.completion(CancellationError())` value then a `.finished`
+completion and no intermediary attempt result.
 - All retriers start their tasks immediately on initialization, and just wait for the current main queue cycle to end
  before executing jobs. This way, if a retrier is created on main queue and cancelled in the same cycle, it's guaranteed 
  to not execute the job even once.
@@ -188,7 +186,8 @@ All giveUp / retry modifiers are evaluated in reversed order.
 
 ### Home made policy
 
-You can create your own policies that conform `InfallibleRetryPolicy` and they will benefit from the same modifiers.
+You can create your own policies that conform `RetryPolicy` and they will benefit from the same modifiers.
+Have a look at `ConstantDelayRetryPolicy.swift` for a basic example.
 
 To create a DSL entry point using your policy:
 

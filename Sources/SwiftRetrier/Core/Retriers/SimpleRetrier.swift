@@ -7,44 +7,43 @@ import Combine
 /// - **an attempt succeeds:** any awaiting on the `value` property will be returned
 ///  the success value, the publisher emits an attempt success embedding this value then finishes.
 /// - **the policy gives up:** any awaiting on the `value` property will throw with
-/// the last attempt error, the publisher emits the attempt failure before completing with a
-/// failure embedding the attempt error.
+/// the last attempt error, the publisher emits the attempt failure then a completion embedding  the attempt error.
 /// - **the retrier is canceled:** any awaiting on the `value` property will throw a `CancellationError`, the publisher
-/// finishes without emitting anything else.
-public class SimpleFallibleRetrier<Output>: SingleOutputFallibleRetrier {
+/// emits a completion embedding the same error then finishes.
+public class SimpleRetrier<Output>: SingleOutputRetrier {
 
-    private let subject = PassthroughSubject<Result<Output, Error>, Error>()
+    private let subject = PassthroughSubject<RetrierEvent<Output>, Never>()
     private var task: Task<Output, Error>!
 
-    public init(policy: FallibleRetryPolicy, job: @escaping Job<Output>) {
-        self.task = createTask(policy: policy.freshFallibleCopy(), job: job)
+    public init(policy: RetryPolicy, job: @escaping Job<Output>) {
+        self.task = createTask(policy: policy.freshCopy(), job: job)
     }
 
     @MainActor
-    private func sendAttemptFailure(_ error: Error) {
-        subject.send(.failure(error))
+    private func sendAttemptFailure(_ attemptFailure: AttemptFailure) {
+        subject.send(.attemptFailure(attemptFailure))
     }
 
     @MainActor
     private func finish(with result: Output) {
         guard !Task.isCancelled else {
-            subject.send(completion: .finished)
             return
         }
-        subject.send(.success(result))
+        subject.send(.attemptSuccess(result))
+        subject.send(.completion(nil))
         subject.send(completion: .finished)
     }
 
     @MainActor
     private func finish(throwing error: Error) {
         guard !Task.isCancelled else {
-            subject.send(completion: .finished)
             return
         }
-        subject.send(completion: .failure(error))
+        subject.send(.completion(error))
+        subject.send(completion: .finished)
     }
 
-    private func createTask(policy: FallibleRetryPolicy, job: @escaping Job<Output>) -> Task<Output, Error> {
+    private func createTask(policy: RetryPolicy, job: @escaping Job<Output>) -> Task<Output, Error> {
         Task {
             // Ensure we don't start before any ongoing business on main actor is finished
             await MainActor.run {}
@@ -57,7 +56,8 @@ public class SimpleFallibleRetrier<Output>: SingleOutputFallibleRetrier {
                         await finish(with: result)
                         return result
                     } catch {
-                        await sendAttemptFailure(error)
+                        let attemptFailure = AttemptFailure(index: attemptIndex, error: error)
+                        await sendAttemptFailure(attemptFailure)
                         try Task.checkCancellation()
                         let retryDecision = await MainActor.run { [attemptIndex] in
                             policy.shouldRetry(on: AttemptFailure(index: attemptIndex, error: error))
@@ -84,15 +84,16 @@ public class SimpleFallibleRetrier<Output>: SingleOutputFallibleRetrier {
         }
     }
 
-    public func publisher() -> AnyPublisher<Result<Output, Error>, Error> {
+    public func publisher() -> AnyPublisher<RetrierEvent<Output>, Never> {
         subject
             .eraseToAnyPublisher()
     }
 
     public func cancel() {
         onMain { [self] in
-            task.cancel()
+            subject.send(.completion(CancellationError()))
             subject.send(completion: .finished)
+            task.cancel()
         }
     }
 }

@@ -26,7 +26,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         let cancellable = retrier
             .publisher()
             .sink(receiveCompletion: { _ in }, receiveValue: {
-                if case .failure(let error) = $0, error as NSError == defaultError {
+                if case .attemptFailure(let attemptFailure) = $0, attemptFailure.error as NSError == defaultError {
                     expectation.fulfill()
                 }
             })
@@ -40,7 +40,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         let cancellable = retrier
             .publisher()
             .sink(receiveCompletion: { _ in }, receiveValue: {
-                if case .success = $0 {
+                if case .attemptSuccess = $0 {
                     expectation.fulfill()
                 }
             })
@@ -62,14 +62,16 @@ class RetrierTests<R: Retrier>: XCTestCase {
             .sink(receiveCompletion: { _ in },
                   receiveValue: {
                 switch $0 {
-                case .success:
+                case .attemptSuccess:
                     guard failureReceived else {
                         XCTFail("Should have received failure before success")
                         return
                     }
                     successExpectation.fulfill()
-                case .failure:
+                case .attemptFailure:
                     failureReceived = true
+                default:
+                    break
                 }
             })
         waitForExpectations(timeout: defaultSequenceWaitingTime)
@@ -84,16 +86,25 @@ class RetrierTests<R: Retrier>: XCTestCase {
         _ = XCTWaiter.wait(for: [expectation(description: "Wait for some time")], timeout: defaultSequenceWaitingTime)
     }
 
-    func test_no_value_received_after_immediate_cancellation() {
+    func test_proper_event_received_after_immediate_cancellation() {
         let retrier = buildRetrier(immediateSuccessJob)
+        let completionExpectation = expectation(description: "Completion with CancellationError received")
         let cancellable = retrier.publisher()
             .sink(receiveCompletion: { _ in },
-                  receiveValue: { _ in
-                XCTFail("Should not receive value on immediate cancellation")
+                  receiveValue: {
+                switch $0 {
+                case .attemptSuccess, .attemptFailure:
+                    XCTFail("Should not receive attempt event on immediate cancellation")
+                case .completion(let error):
+                    if let error, error is CancellationError {
+                        completionExpectation.fulfill()
+                    } else {
+                        XCTFail("Improper completion received, expected cancellation error")
+                    }
+                }
             })
         retrier.cancel()
-        _ = XCTWaiter.wait(for: [expectation(description: "Wait for some time")],
-                           timeout: defaultSequenceWaitingTime / 2)
+        wait(for: [completionExpectation], timeout: 0)
         cancellable.cancel()
     }
 
@@ -106,9 +117,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
                     failureExpectation.fulfill()
                 }
             },
-                  receiveValue: { _ in
-                XCTFail("Should not receive value on immediate cancellation")
-            })
+                  receiveValue: { _ in })
         retrier.cancel()
         waitForExpectations(timeout: 0)
         cancellable.cancel()

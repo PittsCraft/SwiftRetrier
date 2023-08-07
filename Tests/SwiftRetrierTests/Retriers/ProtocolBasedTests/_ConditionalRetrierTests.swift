@@ -55,9 +55,9 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
         let retrier = buildRetrier(trueFalseTruePublisher(defaultJobDuration), asyncJob(2 * defaultJobDuration))
         let cancellable = retrier.publisher()
             .sink(receiveCompletion: { _ in }, receiveValue: {
-                if case .failure(let error) = $0 {
+                if case .attemptFailure(let attemptFailure) = $0 {
                     expectationAttemptFailureReceived.fulfill()
-                    if !(error is CancellationError) {
+                    if !(attemptFailure.error is CancellationError) {
                         XCTFail("Expected attempt failure to be a cancellation error")
                     }
                 }
@@ -74,7 +74,7 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
         let cancellable = retrier.publisher()
             .sink(receiveCompletion: { _ in },
                   receiveValue: {
-                if case .success = $0 {
+                if case .attemptSuccess = $0 {
                     expectationValueReceived.fulfill()
                 }
             })
@@ -99,7 +99,8 @@ class ConditionalRetrierTests<R: Retrier>: XCTestCase {
         let cancellable = retrier.publisher()
             .sink(receiveCompletion: { _ in },
                   receiveValue: {
-                if case .failure(let error) = $0, defaultError.isEqual(error as NSError) {
+                if case .attemptFailure(let attemptFailure) = $0,
+                   defaultError.isEqual(attemptFailure.error as NSError) {
                     expectationOwnErrorPropagated.fulfill()
                 }
             })

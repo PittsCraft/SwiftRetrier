@@ -2,12 +2,12 @@ import Foundation
 import XCTest
 @testable import SwiftRetrier
 
-class SingleOutputFallibleRetrierTests<R: SingleOutputFallibleRetrier>: XCTestCase {
-    var retrier: ((FallibleRetryPolicy, @escaping Job<Void>) -> R)!
+class SingleOutputFallibleRetrierTests<R: SingleOutputRetrier>: XCTestCase {
+    var retrier: ((RetryPolicy, @escaping Job<Void>) -> R)!
 
     private var instance: R?
 
-    func buildRetrier(_ policy: FallibleRetryPolicy, _ job: @escaping Job<Void>) -> R {
+    func buildRetrier(_ policy: RetryPolicy, _ job: @escaping Job<Void>) -> R {
         let retrier = retrier(policy, job)
         instance = retrier
         return retrier

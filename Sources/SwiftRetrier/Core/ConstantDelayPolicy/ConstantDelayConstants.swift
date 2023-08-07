@@ -1,5 +1,5 @@
 import Foundation
 
-public enum ConstantBackoffConstants {
+public enum ConstantDelayConstants {
     public static let defaultDelay: TimeInterval = 1
 }

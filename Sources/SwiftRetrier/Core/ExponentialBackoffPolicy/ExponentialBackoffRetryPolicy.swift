@@ -1,6 +1,6 @@
 import Foundation
 
-open class ExponentialBackoffInfallibleRetryPolicy: InfallibleRetryPolicy {
+open class ExponentialBackoffRetryPolicy: RetryPolicy {
 
     public enum Jitter {
         case none
@@ -76,17 +76,11 @@ open class ExponentialBackoffInfallibleRetryPolicy: InfallibleRetryPolicy {
         min(maxDelay, uncappedDelay(attemptIndex: attemptFailure.index))
     }
 
-    public func freshInfallibleCopy() -> InfallibleRetryPolicy {
-        ExponentialBackoffInfallibleRetryPolicy(timeSlot: timeSlot, maxDelay: maxDelay, jitter: jitter)
+    public func shouldRetry(on attemptFailure: AttemptFailure) -> RetryDecision {
+        .retry(delay: retryDelay(for: attemptFailure))
     }
 
-    static func exponentialBackoff(
-        timeSlot: TimeInterval = ExponentialBackoffConstants.defaultTimeSlot,
-        maxDelay: TimeInterval = ExponentialBackoffConstants.defaultMaxDelay,
-        jitter: ExponentialBackoffInfallibleRetryPolicy.Jitter = ExponentialBackoffConstants.defaultJitter
-    ) -> ExponentialBackoffInfallibleRetryPolicy {
-        ExponentialBackoffInfallibleRetryPolicy(timeSlot: timeSlot,
-                                                maxDelay: maxDelay,
-                                                jitter: jitter)
+    public func freshCopy() -> RetryPolicy {
+        ExponentialBackoffRetryPolicy(timeSlot: timeSlot, maxDelay: maxDelay, jitter: jitter)
     }
 }
