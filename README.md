@@ -37,9 +37,9 @@ jobs independently.
     }
     let poller = coldRetrier
         // If you want to poll, well you can
-        .repeating(withDelay: 30) { 
+        .repeating(withDelay: 30)({ 
             try await fetchSomethingElse() 
-        }
+        })
         
     // You can always cancel hot retriers
     fetcher.cancel()
