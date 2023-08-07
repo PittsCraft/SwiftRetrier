@@ -18,18 +18,20 @@ public extension SingleOutputRetrier {
 
 extension SingleOutputRetrier {
 
-    var resultPublisher: AnyPublisher<Result<Output, Failure>, Never> {
+    var resultPublisher: AnyPublisher<Result<Output, Error>, Never> {
         publisher()
             .compactMap {
                 switch $0 {
-                case .failure:
+                case .completion(let error):
+                    if let error {
+                        return .failure(error)
+                    }
                     return nil
-                case .success(let value):
+                case .attemptSuccess(let value):
                     return .success(value)
+                case .attemptFailure:
+                    return nil
                 }
-            }
-            .catch {
-                Just(.failure($0))
             }
             .eraseToAnyPublisher()
     }

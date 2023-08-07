@@ -1,10 +1,10 @@
 import Foundation
 
-public class RetryOnFalliblePolicyWrapper: FallibleRetryPolicy {
-    private let wrapped: FallibleRetryPolicy
+public class RetryOnPolicyWrapper: RetryPolicy {
+    private let wrapped: RetryPolicy
     private let retryCriterium: (AttemptFailure) -> Bool
 
-    public init(wrapped: FallibleRetryPolicy, retryCriterium: @escaping (AttemptFailure) -> Bool) {
+    public init(wrapped: RetryPolicy, retryCriterium: @escaping (AttemptFailure) -> Bool) {
         self.wrapped = wrapped
         self.retryCriterium = retryCriterium
     }
@@ -13,14 +13,14 @@ public class RetryOnFalliblePolicyWrapper: FallibleRetryPolicy {
         wrapped.retryDelay(for: attemptFailure)
     }
 
-    public func shouldRetry(on attemptFailure: AttemptFailure) -> FallibleRetryDecision {
+    public func shouldRetry(on attemptFailure: AttemptFailure) -> RetryDecision {
         guard !retryCriterium(attemptFailure) else {
             return .retry(delay: retryDelay(for: attemptFailure))
         }
         return wrapped.shouldRetry(on: attemptFailure)
     }
 
-    public func freshFallibleCopy() -> FallibleRetryPolicy {
-        RetryOnFalliblePolicyWrapper(wrapped: wrapped.freshFallibleCopy(), retryCriterium: retryCriterium)
+    public func freshCopy() -> RetryPolicy {
+        RetryOnPolicyWrapper(wrapped: wrapped.freshCopy(), retryCriterium: retryCriterium)
     }
 }

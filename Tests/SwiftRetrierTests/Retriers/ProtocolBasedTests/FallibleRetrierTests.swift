@@ -2,13 +2,13 @@ import Foundation
 import XCTest
 @testable import SwiftRetrier
 
-class FallibleRetrierTests<R: FallibleRetrier>: XCTestCase {
+class FallibleRetrierTests<R: Retrier>: XCTestCase {
 
-    var retrier: ((FallibleRetryPolicy, @escaping Job<Void>) -> R)!
+    var retrier: ((RetryPolicy, @escaping Job<Void>) -> R)!
 
     private var instance: R?
 
-    func buildRetrier(_ policy: FallibleRetryPolicy, _ job: @escaping Job<Void>) -> R {
+    func buildRetrier(_ policy: RetryPolicy, _ job: @escaping Job<Void>) -> R {
         let retrier = retrier(policy, job)
         instance = retrier
         return retrier
@@ -22,41 +22,25 @@ class FallibleRetrierTests<R: FallibleRetrier>: XCTestCase {
 
     func test_publisher_trial_failure_received() {
         let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1), immediateFailureJob)
-        let expectation = expectation(description: "Failure received")
+        let expectation = expectation(description: "Failure completion received")
         let cancellable = retrier
             .publisher()
-            .sink(receiveCompletion: { completion in
-                if case .failure = completion {
+            .sink { event in
+                if case .completion(let error) = event, error != nil {
                     expectation.fulfill()
                 }
-            }, receiveValue: { _ in })
+            }
         waitForExpectations(timeout: defaultWaitingTime)
         cancellable.cancel()
     }
 
-    func test_successPublisher_trial_failure_received() {
+    func test_publisher_completes_on_trial_failure() {
         let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1), immediateFailureJob)
-        let expectation = expectation(description: "Failure received")
+        let expectation = expectation(description: "Completion received")
         let cancellable = retrier
             .successPublisher()
-            .sink(receiveCompletion: { completion in
-                if case .failure = completion {
-                    expectation.fulfill()
-                }
-            }, receiveValue: { _ in })
-        waitForExpectations(timeout: defaultWaitingTime)
-        cancellable.cancel()
-    }
-
-    func test_failurePublisher_trial_failure_received() {
-        let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1), immediateFailureJob)
-        let expectation = expectation(description: "Failure received")
-        let cancellable = retrier
-            .failurePublisher()
-            .sink(receiveCompletion: { completion in
-                if case .failure = completion {
-                    expectation.fulfill()
-                }
+            .sink(receiveCompletion: { _ in
+                expectation.fulfill()
             }, receiveValue: { _ in })
         waitForExpectations(timeout: defaultWaitingTime)
         cancellable.cancel()
@@ -79,20 +63,6 @@ class FallibleRetrierTests<R: FallibleRetrier>: XCTestCase {
             retrier.cancel()
         }
         wait(for: [cancellationExpectation], timeout: defaultSequenceWaitingTime)
-    }
-
-    func test_failure_on_policy_give_up() {
-        let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1),
-                                   immediateFailureJob)
-        let expectation = expectation(description: "Retrier should fail when the policy gives up")
-        let cancellable = retrier.publisher()
-            .sink(receiveCompletion: {
-                if case .failure = $0 {
-                    expectation.fulfill()
-                }
-            }, receiveValue: { _ in })
-        waitForExpectations(timeout: defaultSequenceWaitingTime)
-        cancellable.cancel()
     }
 
     @MainActor

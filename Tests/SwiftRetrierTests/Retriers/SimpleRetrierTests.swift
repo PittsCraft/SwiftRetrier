@@ -3,35 +3,35 @@ import XCTest
 import Combine
 
 // swiftlint:disable type_name
-class SimpleFallibleRetrier_RetrierTests: RetrierTests<SimpleFallibleRetrier<Void>> {
+class SimpleRetrier_RetrierTests: RetrierTests<SimpleRetrier<Void>> {
     override func setUp() {
         retrier = {
-            SimpleFallibleRetrier(policy: Policy.testDefault(), job: $0)
+            SimpleRetrier(policy: Policy.testDefault(), job: $0)
         }
     }
 }
 
-class SimpleFallibleRetrier_FallibleRetrierTests: FallibleRetrierTests<SimpleFallibleRetrier<Void>> {
+class SimpleRetrier_FallibleRetrierTests: FallibleRetrierTests<SimpleRetrier<Void>> {
     override func setUp() {
         retrier = {
-            SimpleFallibleRetrier(policy: $0, job: $1)
+            SimpleRetrier(policy: $0, job: $1)
         }
     }
 }
 
-class SimpleFallibleRetrier_SingleOutputRetrierTests: SingleOutputRetrierTests<SimpleFallibleRetrier<Void>> {
+class SimpleRetrier_SingleOutputRetrierTests: SingleOutputRetrierTests<SimpleRetrier<Void>> {
     override func setUp() {
         retrier = {
-            SimpleFallibleRetrier(policy: Policy.testDefault(), job: $0)
+            SimpleRetrier(policy: Policy.testDefault(), job: $0)
         }
     }
 }
 
-class SimpleFallibleRetrier_SingleOutputFallibleRetrierTests:
-    SingleOutputFallibleRetrierTests<SimpleFallibleRetrier<Void>> {
+class SimpleRetrier_SingleOutputFallibleRetrierTests:
+    SingleOutputFallibleRetrierTests<SimpleRetrier<Void>> {
     override func setUp() {
         retrier = {
-            SimpleFallibleRetrier(policy: $0, job: $1)
+            SimpleRetrier(policy: $0, job: $1)
         }
     }
 }
