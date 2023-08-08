@@ -19,7 +19,7 @@ import Combine
 /// but the further emitted attempt failures index won't be reset.
 ///
 /// If the condition publisher completes and it had not emitted any value or the last value it emitted was `false`
-/// then the retrier emits a completion embedding `RetryError.conditionPublisherCompleted` then finishes.
+/// then the retrier emits a completion embedding `RetryError.conditionPublisherCompleted` and finishes.
 public class ConditionalRetrier<Output>: SingleOutputRetrier, SingleOutputConditionalRetrier {
 
     private let policy: RetryPolicy
@@ -30,8 +30,7 @@ public class ConditionalRetrier<Output>: SingleOutputRetrier, SingleOutputCondit
     private var conditionSubscription: AnyCancellable?
     private var retrierSubscription: AnyCancellable?
     private let conditionPublisher: AnyPublisher<Bool, Never>
-    private var lastAttemptIndex: UInt = 0
-    private var attemptOffset: UInt = 0
+    private var attemptIndex: UInt = 0
 
     private let subject = PassthroughSubject<RetrierEvent<Output>, Never>()
 
@@ -70,7 +69,6 @@ public class ConditionalRetrier<Output>: SingleOutputRetrier, SingleOutputCondit
     }
 
     private func startRetrier() {
-        attemptOffset = lastAttemptIndex
         let retrier = SimpleRetrier(policy: policy, job: job)
         self.retrier = retrier
         bind(retrier: retrier)
@@ -81,8 +79,8 @@ public class ConditionalRetrier<Output>: SingleOutputRetrier, SingleOutputCondit
         retrierSubscription?.cancel()
         retrier.cancel()
         self.retrier = nil
-        lastAttemptIndex += 1
-        subject.send(.attemptFailure(AttemptFailure(index: lastAttemptIndex, error: CancellationError())))
+        subject.send(.attemptFailure(AttemptFailure(index: attemptIndex, error: CancellationError())))
+        attemptIndex += 1
     }
 
     private func finish() {
@@ -99,8 +97,8 @@ public class ConditionalRetrier<Output>: SingleOutputRetrier, SingleOutputCondit
                 switch $0 {
                     // Catch attempt failure to adjust attempt index
                 case .attemptFailure(let attemptFailure):
-                        lastAttemptIndex = attemptFailure.index + attemptOffset
-                        event = .attemptFailure(AttemptFailure(index: lastAttemptIndex, error: attemptFailure.error))
+                    event = .attemptFailure(AttemptFailure(index: attemptIndex, error: attemptFailure.error))
+                    attemptIndex += 1
                     // Remember final event for future await on value
                 case .attemptSuccess:
                     finalEvent = $0
