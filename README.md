@@ -204,7 +204,7 @@ public func withMyOwnPolicy() -> ColdInfallibleRetrier {
 
 ## Contribute
 
-Feel free to make any comment, critic, bug report or feature request using Github issues.
+Feel free to make any comment, criticism, bug report or feature request using Github issues.
 You can also directly send me an email at `pierre` *strange "a" with a long round tail* `pittscraft.com`.
 
 ## License
