@@ -29,12 +29,12 @@ func taskWait(_ time: TimeInterval = defaultWaitingTime) async throws {
     try await Task.sleep(nanoseconds: nanoseconds(time))
 }
 
-extension Policy {
+enum Policy {
     static func testDefault(maxAttempts: UInt = UInt.max) -> RetryPolicy {
-        constantDelay(defaultRetryDelay).giveUpAfter(maxAttempts: maxAttempts)
+        ConstantDelayRetryPolicy(delay: defaultRetryDelay).giveUpAfter(maxAttempts: maxAttempts)
     }
 
     static func testDefault() -> RetryPolicy {
-        constantDelay(defaultRetryDelay)
+        ConstantDelayRetryPolicy(delay: defaultRetryDelay)
     }
 }

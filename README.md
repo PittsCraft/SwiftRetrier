@@ -20,8 +20,9 @@ let coldRetrier = withExponentialBackoff()
     .retryOnErrors {
         $0 is MyTmpError
     }
-    // All giveUp / retry modifiers are evaluated in reversed order.
 ```
+
+**All giveUp / retry modifiers are evaluated in reversed order.**
 
 [Exponential backoff](https://aws.amazon.com/fr/blogs/architecture/exponential-backoff-and-jitter/) with
 full jitter is the default and recommended algorithm to fetch from a backend. 
@@ -98,48 +99,6 @@ the completion
 - Retriers expose `successPublisher()`, `failurePublisher()` and `completionPublisher()` shortcuts.
 - You can use `publisher(propagateCancellation: true)` to cancel the retrier when you're done listening to it.
 
-## Without the main DSL
-
-### `withRetries()` functions
-
-You may prefer to use a function to more directly access either the `async` value of your job, or the success publisher
-of your repeating job.
-
-In this case you can use the `withRetries()` functions.
-
-Their first argument is the `policy`. It:
-- handles delays and failure criteria
-- defaults to `Policy.exponentialBackoff()`
-- can be built using the `Policy` entry point
-
-```swift
-let policy = Policy.exponentialBackoff().giveUpAfter(maxAttempts: 12)
-let value = try await withRetries(policy: policy) { try await fetchSomething() }
-// You can add an extra `attemptFailureHandler` block to log attempt errors.
-// If the task executing the concurrency context is cancelled, the underlying retrier will be canceled.
-
-withRetries(policy: Policy.exponentialBackoff(), repeatDelay: 10) { try await fetchSomething() }
-    .success() // If you're not interested in all events, just use .success()
-    .sink {
-        print("Got a value: \($0), let's rest 10s now")
-    }
-// You can set `propagateCancellation` to `true` to cancel the underlying retrier when you're done listening to the
-// success publisher.
-```
-
-Note that `conditionPublisher` is an optional argument to make the execution conditional.
-
-### `retrier()` functions
-
-Use the shortcut `retrier()` functions to build a hot retrier in one line and keep full control on it. They have
-the almost same arguments as `withRetries()` and they return an executing retrier. 
-
-### Actual retrier classes
-
-Finally, you can also use the classes initializers directly, namely `SimpleRetrier`, 
-`ConditionalRetrier` and `SimpleRepeater`.
-
-
 ## Retriers contract
 
 - All retriers are cancellable.
@@ -169,26 +128,17 @@ When repeating, the policy is reused from start after each success.
 
 ### Built-in retry policies
 
-```swift
-Policy.exponentialBackoff()
-Policy.constantDelay()
-Policy.noDelay()
-```
-
-**Exponential backoff** policy is implemented according to state of the art algorithms.
-Have a look to the available arguments and you'll recognize the standard parameters and options.
+**ExponentialBackoffRetryPolicy** is implemented according to state-of-the-art algorithms.
+Have a look to the available arguments, and you'll recognize the standard parameters and options.
 You can especially choose the jitter type between `none`, `full` (default) and `decorrelated`.
 
-**Constant delay** policy does what you expect, just waiting for a fixed amount of time.
+**ConstantDelayRetryPolicy** does what you expect, just waiting for a fixed amount of time.
 
-**No delay** policy is a constant delay policy with a `0` delay.
-
-In a fallible context, you can add failure conditions using 
-`giveUp*()` functions, and bypass these conditions using `retry*()` functions.
+You can add failure conditions using `giveUp*()` functions, and bypass these conditions using `retry*()` functions.
 
 All giveUp / retry modifiers are evaluated in reversed order.
 
-### Home made policy
+### Homemade policy
 
 You can create your own policies that conform `RetryPolicy` and they will benefit from the same modifiers.
 Have a look at `ConstantDelayRetryPolicy.swift` for a basic example.
@@ -196,15 +146,20 @@ Have a look at `ConstantDelayRetryPolicy.swift` for a basic example.
 To create a DSL entry point using your policy:
 
 ```swift
-public func withMyOwnPolicy() -> ColdInfallibleRetrier {
+public func withMyOwnPolicy() -> ColdRetrier {
     let policy = MyOwnPolicy()
-    return ColdInfallibleRetrier(policy: policy, conditionPublisher: nil)
+    return ColdRetrier(policy: policy, conditionPublisher: nil)
 }
 ```
 
+## Actual retrier classes
+
+You can use the classes initializers directly, namely `SimpleRetrier`, 
+`ConditionalRetrier` and `Repeater`.
+
 ## Contribute
 
-Feel free to make any comment, criticism, bug report or feature request using Github issues.
+Feel free to make any comment, criticism, bug report or feature request using GitHub issues.
 You can also directly send me an email at `pierre` *strange "a" with a long round tail* `pittscraft.com`.
 
 ## License

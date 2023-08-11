@@ -42,12 +42,12 @@ public extension ColdRepeater {
     }
 
     @discardableResult
-    func execute<Output>(_ job: @escaping Job<Output>) -> SimpleRepeater<Output> {
-        SimpleRepeater(policy: policy, repeatDelay: repeatDelay, job: job)
+    func execute<Output>(_ job: @escaping Job<Output>) -> Repeater<Output> {
+        Repeater(policy: policy, repeatDelay: repeatDelay, job: job)
     }
 
     @discardableResult
-    func callAsFunction<Output>(_ job: @escaping Job<Output>) -> SimpleRepeater<Output> {
+    func callAsFunction<Output>(_ job: @escaping Job<Output>) -> Repeater<Output> {
         execute(job)
     }
 }
