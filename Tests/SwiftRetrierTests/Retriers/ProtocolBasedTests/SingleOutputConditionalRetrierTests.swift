@@ -2,7 +2,7 @@ import XCTest
 @testable import SwiftRetrier
 import Combine
 
-class SingleOutputConditionalRetrierTests<R: SingleOutputConditionalRetrier>: XCTestCase {
+class SingleOutputConditionalRetrierTests<R: SingleOutputRetrier>: XCTestCase {
 
     var retrier: ((AnyPublisher<Bool, Never>, Job<Void>) -> R)!
 
