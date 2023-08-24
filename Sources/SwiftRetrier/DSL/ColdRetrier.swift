@@ -39,7 +39,7 @@ public extension ColdRetrier {
                     conditionPublisher: conditionPublisher.combineWith(condition: self.conditionPublisher))
     }
 
-    func `repeat`(withDelay repeatDelay: TimeInterval) -> ColdRepeater {
+    func repeating(withDelay repeatDelay: TimeInterval) -> ColdRepeater {
         ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
     }
 
