@@ -19,7 +19,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         super.tearDown()
     }
 
-    func test_publisher_finished_received_on_success() {
+    func test_Should_CompletePublisherWithFinished_When_JobSucceeds() {
         let retrier = buildRetrier(immediateSuccessJob)
         let expectation = expectation(description: "Finished received")
         let cancellable = retrier
@@ -33,7 +33,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_success_publisher_finished_received_on_success() {
+    func test_Should_CompleteSuccessPublisherWithFinished_When_JobSucceeds() {
         let retrier = buildRetrier(immediateSuccessJob)
         let expectation = expectation(description: "Finished received")
         let cancellable = retrier
@@ -47,7 +47,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_finishes_after_retry() {
+    func test_Should_CompletePublisherWithFinished_When_JobSucceedsAfterOneRetry() {
         var calledOnce = false
         let retrier = buildRetrier({
             if !calledOnce {
@@ -66,7 +66,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_async_value_received_after_retry() {
+    func test_Should_ReceiveAsyncValue_When_JobSucceedsAfterOneRetry() {
         var calledOnce = false
         let retrier = buildRetrier({
             if !calledOnce {
@@ -83,7 +83,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
     }
 
     @MainActor
-    func test_await_value_throws_on_cancellation() async throws {
+    func test_Should_ThrowErrorInJobAndInValueAwaiting_When_RetrierIsCancelled() async throws {
         let expectation = expectation(description: "Cancellation catched")
         let retrier = buildRetrier({
             do {
@@ -103,7 +103,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
     }
 
     @MainActor
-    func test_value_await_resolves_when_already_succeeded() async throws {
+    func test_Should_SucceedValueAwaiting_When_AwaitStartedAfterRetrierSuccessfulResolution() async throws {
         let retrier = buildRetrier(immediateSuccessJob)
         // Let the retrier finish
         try await taskWait()
@@ -116,7 +116,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
     }
 
     @MainActor
-    func test_deallocated_some_time_after_success() async throws {
+    func test_Should_DeallocateRetrierAfterSomeTime_When_RetrierSuccessfullyFinished() async throws {
         weak var retrier = retrier(immediateSuccessJob)
         try await taskWait()
         XCTAssertNil(retrier)

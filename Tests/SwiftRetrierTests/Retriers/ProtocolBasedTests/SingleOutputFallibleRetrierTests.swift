@@ -20,7 +20,7 @@ class SingleOutputFallibleRetrierTests<R: SingleOutputRetrier>: XCTestCase {
     }
 
     @MainActor
-    func test_async_value_throws_on_trial_failure() async {
+    func test_Should_ThrowErrorOnValueAwaiting_When_PolicyGivesUp() async {
         let retrier = buildRetrier(Policy.testDefault().giveUpAfter(maxAttempts: 1), immediateFailureJob)
         do {
             _ = try await retrier.value
@@ -28,7 +28,7 @@ class SingleOutputFallibleRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         } catch {}
     }
 
-    func test_publisher_finished_received_on_trial_failure() {
+    func test_Should_ReceiveFinishedCompletionOnFailurePublisher_When_RetrierSucceedsOnLastAttempt() {
         let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1), immediateSuccessJob)
         let expectation = expectation(description: "Finished received")
         let cancellable = retrier
@@ -42,7 +42,7 @@ class SingleOutputFallibleRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_publisher_attempt_failure_received_on_trial_failure() {
+    func test_Should_ReceiveAttemptFailureOnFailurePublisher_When_JobFailsOnLastAttempt() {
         let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1), immediateFailureJob)
         let expectation = expectation(description: "Attempt failure received")
         let cancellable = retrier
