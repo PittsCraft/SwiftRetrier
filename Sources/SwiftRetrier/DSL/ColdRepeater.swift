@@ -19,18 +19,14 @@ public extension ColdRepeater {
         return ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
     }
 
+    func giveUpAfter(timeout: TimeInterval) -> ColdRepeater {
+        let policy = policy.giveUpAfter(timeout: timeout)
+        return ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
+    }
+
     func giveUpOnErrors(matching finalErrorCriterium: @escaping (Error) -> Bool) -> ColdRepeater {
         let policy = policy.giveUpOnErrors(matching: finalErrorCriterium)
         return ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
-    }
-
-    func retry(on retryCriterium: @escaping (AttemptFailure) -> Bool) -> ColdRepeater {
-        let policy = RetryOnPolicyWrapper(wrapped: policy, retryCriterium: retryCriterium)
-        return ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
-    }
-
-    func retryOnErrors(matching retryCriterium: @escaping (Error) -> Bool) -> ColdRepeater {
-        retry(on: { retryCriterium($0.error) })
     }
 
     func onlyWhen<P>(

@@ -11,18 +11,13 @@ var conditionPublisher: AnyPublisher<Bool, Never>
 let coldRetrier = withExponentialBackoff() 
     // Fetch only when you've got network and your user is authenticated for example
     .onlyWhen(conditionPublisher)
-    // Ensure your retrier fails on some conditions
+    // Ensure your retrier gives up on some conditions
     .giveUpAfter(maxAttempts: 10)
+    .giveUpAfter(timeout: 30)
     .giveUpOnErrors {
         $0 is MyFatalError
     }
-    // Ensure your retrier won't give up on some errors
-    .retryOnErrors {
-        $0 is MyTmpError
-    }
 ```
-
-**All giveUp / retry modifiers are evaluated in reversed order.**
 
 [Exponential backoff](https://aws.amazon.com/fr/blogs/architecture/exponential-backoff-and-jitter/) with
 full jitter is the default and recommended algorithm to fetch from a backend. 
@@ -60,11 +55,9 @@ If you don't repeat, you can wait for a single value in a concurrency context
 let value = try await withExponentialBackoff() 
     .onlyWhen(conditionPublisher)
     .giveUpAfter(maxAttempts: 10)
+    .giveUpAfter(timeout: 30)
     .giveUpOnErrors {
         $0 is MyFatalError
-    }
-    .retryOnErrors {
-        $0 is MyTmpError
     }
     .execute {
         try await api.fetchValue()
@@ -120,6 +113,7 @@ case, guarantees such as the previous one are no longer valid.
 - Condition publishers events will be processed on `DispatchQueue.main`, but won't be delayed if they're already 
 emitted on it.
 - After a retrier is interrupted then resumed by its `conditionPublisher`, its policy is reused from start.
+Consequently `giveUpAfter(maxAttempts:)` and `giveUpAfter(timeout:)` checks are applied to the current trial, ignoring previous ones.
 
 ## Retry Policies
 
@@ -134,9 +128,7 @@ You can especially choose the jitter type between `none`, `full` (default) and `
 
 **ConstantDelayRetryPolicy** does what you expect, just waiting for a fixed amount of time.
 
-You can add failure conditions using `giveUp*()` functions, and bypass these conditions using `retry*()` functions.
-
-All giveUp / retry modifiers are evaluated in reversed order.
+You can add failure conditions using `giveUp*()` functions.
 
 ### Homemade policy
 

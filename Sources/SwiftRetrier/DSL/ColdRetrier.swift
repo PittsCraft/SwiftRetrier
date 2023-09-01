@@ -18,18 +18,14 @@ public extension ColdRetrier {
         return ColdRetrier(policy: policy, conditionPublisher: conditionPublisher)
     }
 
+    func giveUpAfter(timeout: TimeInterval) -> ColdRetrier {
+        let policy = policy.giveUpAfter(timeout: timeout)
+        return ColdRetrier(policy: policy, conditionPublisher: conditionPublisher)
+    }
+
     func giveUpOnErrors(matching finalErrorCriterium: @escaping (Error) -> Bool) -> ColdRetrier {
         let policy = policy.giveUpOnErrors(matching: finalErrorCriterium)
         return ColdRetrier(policy: policy, conditionPublisher: conditionPublisher)
-    }
-
-    func retry(on retryCriterium: @escaping (AttemptFailure) -> Bool) -> ColdRetrier {
-        let policy = RetryOnPolicyWrapper(wrapped: policy, retryCriterium: retryCriterium)
-        return ColdRetrier(policy: policy, conditionPublisher: conditionPublisher)
-    }
-
-    func retryOnErrors(matching retryCriterium: @escaping (Error) -> Bool) -> ColdRetrier {
-        retry(on: { retryCriterium($0.error) })
     }
 
     func onlyWhen<P>(
