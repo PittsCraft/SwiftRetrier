@@ -12,6 +12,7 @@ import Combine
 /// emits a completion embedding the same error then finishes.
 public class SimpleRetrier<Output>: SingleOutputRetrier {
 
+    public let trialStart = Date()
     private let subject = PassthroughSubject<RetrierEvent<Output>, Never>()
     private var task: Task<Output, Error>!
 
@@ -56,11 +57,13 @@ public class SimpleRetrier<Output>: SingleOutputRetrier {
                         await finish(with: result)
                         return result
                     } catch {
-                        let attemptFailure = AttemptFailure(index: attemptIndex, error: error)
+                        let attemptFailure = AttemptFailure(trialStart: trialStart, index: attemptIndex, error: error)
                         await sendAttemptFailure(attemptFailure)
                         try Task.checkCancellation()
                         let retryDecision = await MainActor.run { [attemptIndex] in
-                            policy.shouldRetry(on: AttemptFailure(index: attemptIndex, error: error))
+                            policy.shouldRetry(on: AttemptFailure(trialStart: trialStart,
+                                                                  index: attemptIndex,
+                                                                  error: error))
                         }
                         switch retryDecision {
                         case .giveUp:

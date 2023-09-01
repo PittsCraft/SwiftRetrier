@@ -10,6 +10,13 @@ public extension RetryPolicy {
         GiveUpOnPolicyWrapper(wrapped: self, giveUpCriterium: { $0.index >= maxAttempts - 1})
     }
 
+    func giveUpAfter(timeout: TimeInterval) -> RetryPolicy {
+        GiveUpOnPolicyWrapper(wrapped: self, giveUpCriterium: {
+            let nextAttemptStart = Date().addingTimeInterval(retryDelay(for: $0))
+            return nextAttemptStart >= $0.trialStart.addingTimeInterval(timeout)
+        })
+    }
+
     func giveUpOnErrors(matching finalErrorCriterium: @escaping (Error) -> Bool) -> RetryPolicy {
         GiveUpOnPolicyWrapper(wrapped: self, giveUpCriterium: { finalErrorCriterium($0.error) })
     }

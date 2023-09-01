@@ -78,8 +78,10 @@ public class ConditionalRetrier<Output>: SingleOutputRetrier {
         guard let retrier else { return }
         retrierSubscription?.cancel()
         retrier.cancel()
+        subject.send(.attemptFailure(AttemptFailure(trialStart: retrier.trialStart,
+                                                    index: attemptIndex,
+                                                    error: CancellationError())))
         self.retrier = nil
-        subject.send(.attemptFailure(AttemptFailure(index: attemptIndex, error: CancellationError())))
         attemptIndex += 1
     }
 
@@ -97,7 +99,9 @@ public class ConditionalRetrier<Output>: SingleOutputRetrier {
                 switch $0 {
                     // Catch attempt failure to adjust attempt index
                 case .attemptFailure(let attemptFailure):
-                    event = .attemptFailure(AttemptFailure(index: attemptIndex, error: attemptFailure.error))
+                    event = .attemptFailure(AttemptFailure(trialStart: attemptFailure.trialStart,
+                                                           index: attemptIndex,
+                                                           error: attemptFailure.error))
                     attemptIndex += 1
                     // Remember final event for future await on value
                 case .attemptSuccess:
