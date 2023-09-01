@@ -20,7 +20,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         super.tearDown()
     }
 
-    func test_attempt_failure_received() {
+    func test_Should_PublishAttemptFailureWithJobError_When_JobFails() {
         let retrier = buildRetrier({ throw defaultError })
         let expectation = expectation(description: "Failure received")
         let cancellable = retrier
@@ -34,7 +34,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_attempt_success_received() {
+    func test_Should_PublishAttemptSuccess_When_JobSucceeds() {
         let retrier = buildRetrier(immediateSuccessJob)
         let expectation = expectation(description: "Success received")
         let cancellable = retrier
@@ -48,7 +48,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_retries() {
+    func test_Should_PublishAttemptFailureThenAttemptSuccess_When_JobFailsThenSucceeds() {
         var calledOnce = false
         let retrier = buildRetrier({
             if !calledOnce {
@@ -78,7 +78,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_job_not_called_on_immediate_cancellation() {
+    func test_Should_NotExecuteJob_When_RetrierIsCancelledInTheSameCycleItIsCreated() {
         let retrier = buildRetrier({
             XCTFail("Should not be called on immediate cancellation")
         })
@@ -86,7 +86,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         _ = XCTWaiter.wait(for: [expectation(description: "Wait for some time")], timeout: defaultSequenceWaitingTime)
     }
 
-    func test_proper_event_received_after_immediate_cancellation() {
+    func test_Should_PublishCompletionWithCancellationError_When_RetrierIsCancelledInTheSameCycleItIsCreated() {
         let retrier = buildRetrier(immediateSuccessJob)
         let completionExpectation = expectation(description: "Completion with CancellationError received")
         let cancellable = retrier.publisher()
@@ -108,7 +108,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_finished_received_after_cancellation() {
+    func test_Should_CompletePublisherWithFinished_When_RetrierIsCancelled() {
         let failureExpectation = expectation(description: "Failure received")
         let retrier = buildRetrier(immediateSuccessJob)
         let cancellable = retrier.publisher()
@@ -124,7 +124,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
     }
 
     @MainActor
-    func test_deallocated_some_time_after_cancellation() async throws {
+    func test_Should_DeallocateRetrier_When_RetrierWasCancelledSomeTimeAgo() async throws {
         weak var retrier = retrier(immediateFailureJob)
         retrier?.cancel()
         try await taskWait()
@@ -132,7 +132,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
     }
 
     @MainActor
-    func test_still_trying_while_not_finished_and_not_retained() async throws {
+    func test_Should_StillRetry_When_RetrierNotFinishedAndNotRetained() async throws {
         var shouldSignalExecution = false
         var executed = false
         weak var retrier = retrier {

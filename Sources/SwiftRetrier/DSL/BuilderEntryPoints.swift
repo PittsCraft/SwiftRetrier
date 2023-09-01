@@ -6,8 +6,8 @@ public func withExponentialBackoff(
     jitter: ExponentialBackoffRetryPolicy.Jitter = ExponentialBackoffConstants.defaultJitter
 ) -> ColdRetrier {
     let policy = ExponentialBackoffRetryPolicy(timeSlot: timeSlot,
-                                                         maxDelay: maxDelay,
-                                                         jitter: jitter)
+                                               maxDelay: maxDelay,
+                                               jitter: jitter)
     return ColdRetrier(policy: policy, conditionPublisher: nil)
 }
 

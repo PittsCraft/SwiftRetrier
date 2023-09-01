@@ -21,7 +21,7 @@ class SingleOutputConditionalRetrierTests<R: SingleOutputRetrier>: XCTestCase {
     }
 
     @MainActor
-    func test_error_thrown_when_condition_publisher_completes_with_no_value() async {
+    func test_Should_ThrowErrorOnValueAwaiting_When_ConditionPublisherCompletesWithNoValue() async {
         let condition = Empty<Bool, Never>().eraseToAnyPublisher()
         let retrier = buildRetrier(condition, immediateSuccessJob)
         do {
@@ -31,7 +31,7 @@ class SingleOutputConditionalRetrierTests<R: SingleOutputRetrier>: XCTestCase {
     }
 
     @MainActor
-    func test_error_thrown_when_condition_publisher_completes_after_false() async {
+    func test_Should_ThrowErrorOnValueAwaiting_When_ConditionPublisherCompletesAfterPublishingFalse() async {
         let condition = Just(false)
             .eraseToAnyPublisher()
         let retrier = buildRetrier(condition, immediateSuccessJob)
@@ -41,7 +41,7 @@ class SingleOutputConditionalRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         } catch {}
     }
 
-    func test_receive_second_trial_async_value() {
+    func test_Should_SuccessfullyAwaitValue_When_ConditionPublisherCausesASecondTrialThatSucceeds() {
         let job = {
             try await taskWait()
         }
@@ -55,7 +55,7 @@ class SingleOutputConditionalRetrierTests<R: SingleOutputRetrier>: XCTestCase {
     }
 
     @MainActor
-    func test_receive_publisher_completion_after_second_trial_finished() async {
+    func test_Should_CompletePublisherWithFinished_When_ConditionPublisherCausesASecondTrialThatSucceeds() async {
         let job = {
             try await taskWait()
         }
@@ -72,7 +72,7 @@ class SingleOutputConditionalRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_right_attempts_count() {
+    func test_Should_ExecuteJobTheRightNumberOfTimes_When_ConditionPublisherInterruptsATrial() {
         var failedOnce = false
         var jobExecutionCount = 0
         let job = {

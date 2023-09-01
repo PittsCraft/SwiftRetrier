@@ -20,7 +20,7 @@ class FallibleRetrierTests<R: Retrier>: XCTestCase {
         super.tearDown()
     }
 
-    func test_publisher_trial_failure_received() {
+    func test_Should_PublishCompletionEventWithError_When_JobFailsAndPolicyGivesUp() {
         let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1), immediateFailureJob)
         let expectation = expectation(description: "Failure completion received")
         let cancellable = retrier
@@ -34,7 +34,7 @@ class FallibleRetrierTests<R: Retrier>: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_publisher_completes_on_trial_failure() {
+    func test_Should_CompleteSuccessPublisher_When_JobFailsAndPolicyGivesUp() {
         let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1), immediateFailureJob)
         let expectation = expectation(description: "Completion received")
         let cancellable = retrier
@@ -46,7 +46,7 @@ class FallibleRetrierTests<R: Retrier>: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_cancellation_propagated_to_job() {
+    func test_Should_ThrowErrorInJob_When_RetrierIsCancelled() {
         let cancellationExpectation = expectation(description: "Cancellation catched")
         var fulfilled = false
         let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1), {
@@ -66,7 +66,7 @@ class FallibleRetrierTests<R: Retrier>: XCTestCase {
     }
 
     @MainActor
-    func test_deallocated_some_time_after_failure() async throws {
+    func test_Should_DeallocateRetrier_When_RetrierHasCompletedWithFailureSomeTimeAgo() async throws {
         weak var retrier = retrier(Policy.testDefault(maxAttempts: 1), immediateFailureJob)
         try await taskWait()
         XCTAssertNil(retrier)
