@@ -1,9 +1,9 @@
 import Foundation
 import Combine
 
-public class AnySingleOutputRetrier<Value>: AnyRetrier<Value>, SingleOutputRetrier {
+public class AnySingleOutputRetrier<Value: Sendable>: AnyRetrier<Value>, SingleOutputRetrier, @unchecked Sendable {
 
-    private let outputBlock: () async throws -> Output
+    private let outputBlock: @Sendable () async throws -> Output
 
     public init<R>(_ retrier: R) where R: SingleOutputRetrier, R.Output == Value {
         self.outputBlock = { try await retrier.value }

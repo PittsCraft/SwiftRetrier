@@ -1,1 +1,1 @@
-public typealias Job<Value> = () async throws -> Value
+public typealias Job<Value> = @Sendable () async throws -> Value

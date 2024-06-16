@@ -8,7 +8,7 @@ public struct ColdRetrier {
 
 public extension ColdRetrier {
 
-    func giveUp(on giveUpCriterium: @escaping (AttemptFailure) -> Bool) -> ColdRetrier {
+    func giveUp(on giveUpCriterium: @escaping @Sendable (AttemptFailure) -> Bool) -> ColdRetrier {
         let policy = policy.giveUp(on: giveUpCriterium)
         return ColdRetrier(policy: policy, conditionPublisher: conditionPublisher)
     }
@@ -23,7 +23,7 @@ public extension ColdRetrier {
         return ColdRetrier(policy: policy, conditionPublisher: conditionPublisher)
     }
 
-    func giveUpOnErrors(matching finalErrorCriterium: @escaping (Error) -> Bool) -> ColdRetrier {
+    func giveUpOnErrors(matching finalErrorCriterium: @escaping @Sendable (Error) -> Bool) -> ColdRetrier {
         let policy = policy.giveUpOnErrors(matching: finalErrorCriterium)
         return ColdRetrier(policy: policy, conditionPublisher: conditionPublisher)
     }
@@ -40,7 +40,7 @@ public extension ColdRetrier {
     }
 
     @discardableResult
-    func execute<Output>(_ job: @escaping Job<Output>) -> AnySingleOutputRetrier<Output> {
+    func execute<Output: Sendable>(_ job: @escaping Job<Output>) -> AnySingleOutputRetrier<Output> {
         if let conditionPublisher {
             return ConditionalRetrier(policy: policy, conditionPublisher: conditionPublisher, job: job)
                 .eraseToAnySingleOutputRetrier()
@@ -49,7 +49,7 @@ public extension ColdRetrier {
     }
 
     @discardableResult
-    func callAsFunction<Output>(_ job: @escaping Job<Output>) -> AnySingleOutputRetrier<Output> {
+    func callAsFunction<Output: Sendable>(_ job: @escaping Job<Output>) -> AnySingleOutputRetrier<Output> {
         execute(job)
     }
 }

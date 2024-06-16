@@ -1,8 +1,8 @@
 import Foundation
 
-open class ExponentialBackoffRetryPolicy: RetryPolicy {
+public struct ExponentialBackoffRetryPolicy: RetryPolicy {
 
-    public enum Jitter {
+    public enum Jitter: Sendable {
         case none
         case full
         case decorrelated(growthFactor: Double = ExponentialBackoffConstants.defaultDecorrelatedJitterGrowthFactor)
@@ -11,14 +11,16 @@ open class ExponentialBackoffRetryPolicy: RetryPolicy {
     public let timeSlot: TimeInterval
     public let maxDelay: TimeInterval
     public let jitter: Jitter
-    private var previousDelay: TimeInterval?
+    private let previousDelay: TimeInterval?
 
     public init(timeSlot: TimeInterval = ExponentialBackoffConstants.defaultTimeSlot,
                 maxDelay: TimeInterval = ExponentialBackoffConstants.defaultMaxDelay,
-                jitter: Jitter = ExponentialBackoffConstants.defaultJitter) {
+                jitter: Jitter = ExponentialBackoffConstants.defaultJitter,
+                previousDelay: TimeInterval? = nil) {
         self.timeSlot = timeSlot
         self.maxDelay = maxDelay
         self.jitter = jitter
+        self.previousDelay = previousDelay
     }
 
     public func exponentiationBySquaring<T: BinaryInteger>(_ base: T, _ multiplier: T, _ exponent: T) -> T {
@@ -57,7 +59,6 @@ open class ExponentialBackoffRetryPolicy: RetryPolicy {
         } else {
             delay = fullJitterDelay(attemptIndex: attemptIndex)
         }
-        previousDelay = delay
         return delay
     }
 
@@ -72,7 +73,7 @@ open class ExponentialBackoffRetryPolicy: RetryPolicy {
         }
     }
 
-    open func retryDelay(for attemptFailure: AttemptFailure) -> TimeInterval {
+    public func retryDelay(for attemptFailure: AttemptFailure) -> TimeInterval {
         min(maxDelay, uncappedDelay(attemptIndex: attemptFailure.index))
     }
 
@@ -80,7 +81,7 @@ open class ExponentialBackoffRetryPolicy: RetryPolicy {
         .retry(delay: retryDelay(for: attemptFailure))
     }
 
-    public func freshCopy() -> RetryPolicy {
-        ExponentialBackoffRetryPolicy(timeSlot: timeSlot, maxDelay: maxDelay, jitter: jitter)
+    public func policyAfter(attemptFailure: AttemptFailure, delay: TimeInterval) -> any RetryPolicy {
+        ExponentialBackoffRetryPolicy(timeSlot: timeSlot, maxDelay: maxDelay, jitter: jitter, previousDelay: delay)
     }
 }

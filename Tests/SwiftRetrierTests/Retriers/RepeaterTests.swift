@@ -36,10 +36,11 @@ class RepeaterTests: XCTestCase {
         super.tearDown()
     }
 
+    @MainActor
     func test_repeats() {
         var count = 0
         let expectation = expectation(description: "Should repeat")
-        _ = buildRetrier(repeatDelay, {
+        _ = buildRetrier(repeatDelay, { @MainActor in
             count += 1
             if count == 3 {
                 expectation.fulfill()

@@ -19,6 +19,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         super.tearDown()
     }
 
+    @MainActor
     func test_Should_CompletePublisherWithFinished_When_JobSucceeds() {
         let retrier = buildRetrier(immediateSuccessJob)
         let expectation = expectation(description: "Finished received")
@@ -33,6 +34,7 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         cancellable.cancel()
     }
 
+    @MainActor
     func test_Should_CompleteSuccessPublisherWithFinished_When_JobSucceeds() {
         let retrier = buildRetrier(immediateSuccessJob)
         let expectation = expectation(description: "Finished received")
@@ -47,9 +49,10 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         cancellable.cancel()
     }
 
+    @MainActor
     func test_Should_CompletePublisherWithFinished_When_JobSucceedsAfterOneRetry() {
         var calledOnce = false
-        let retrier = buildRetrier({
+        let retrier = buildRetrier({ @MainActor in
             if !calledOnce {
                 calledOnce = true
                 throw defaultError
@@ -66,9 +69,10 @@ class SingleOutputRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         cancellable.cancel()
     }
 
+    @MainActor
     func test_Should_ReceiveAsyncValue_When_JobSucceedsAfterOneRetry() {
         var calledOnce = false
-        let retrier = buildRetrier({
+        let retrier = buildRetrier({ @MainActor in
             if !calledOnce {
                 calledOnce = true
                 throw defaultError

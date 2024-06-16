@@ -1,6 +1,6 @@
 import Foundation
 
-open class ConstantDelayRetryPolicy: RetryPolicy {
+public struct ConstantDelayRetryPolicy: RetryPolicy {
 
     public let delay: TimeInterval
 
@@ -16,7 +16,7 @@ open class ConstantDelayRetryPolicy: RetryPolicy {
         .retry(delay: retryDelay(for: attemptFailure))
     }
 
-    public func freshCopy() -> RetryPolicy {
+    public func policyAfter(attemptFailure: AttemptFailure, delay: TimeInterval) -> any RetryPolicy {
         self
     }
 }

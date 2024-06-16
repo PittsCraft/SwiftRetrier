@@ -28,6 +28,7 @@ class SingleOutputFallibleRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         } catch {}
     }
 
+    @MainActor
     func test_Should_ReceiveFinishedCompletionOnFailurePublisher_When_RetrierSucceedsOnLastAttempt() {
         let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1), immediateSuccessJob)
         let expectation = expectation(description: "Finished received")
@@ -42,6 +43,7 @@ class SingleOutputFallibleRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         cancellable.cancel()
     }
 
+    @MainActor
     func test_Should_ReceiveAttemptFailureOnFailurePublisher_When_JobFailsOnLastAttempt() {
         let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1), immediateFailureJob)
         let expectation = expectation(description: "Attempt failure received")

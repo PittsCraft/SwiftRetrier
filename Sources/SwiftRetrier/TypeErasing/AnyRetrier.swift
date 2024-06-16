@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-public class AnyRetrier<Output>: Retrier {
+public class AnyRetrier<Output: Sendable>: Retrier, @unchecked Sendable {
 
     public let publisherBlock: () -> AnyPublisher<RetrierEvent<Output>, Never>
     private let cancelBlock: () -> Void
