@@ -8,8 +8,8 @@ public struct ColdRetrier {
 
 public extension ColdRetrier {
 
-    func giveUp(on giveUpCriterium: @escaping @Sendable (AttemptFailure) -> Bool) -> ColdRetrier {
-        let policy = policy.giveUp(on: giveUpCriterium)
+    func giveUp(on giveUpCriteria: @escaping GiveUpCriteria) -> ColdRetrier {
+        let policy = policy.giveUp(on: giveUpCriteria)
         return ColdRetrier(policy: policy, conditionPublisher: conditionPublisher)
     }
 
@@ -23,8 +23,8 @@ public extension ColdRetrier {
         return ColdRetrier(policy: policy, conditionPublisher: conditionPublisher)
     }
 
-    func giveUpOnErrors(matching finalErrorCriterium: @escaping @Sendable (Error) -> Bool) -> ColdRetrier {
-        let policy = policy.giveUpOnErrors(matching: finalErrorCriterium)
+    func giveUpOnErrors(matching finalErrorCriteria: @escaping @Sendable (Error) -> Bool) -> ColdRetrier {
+        let policy = policy.giveUpOnErrors(matching: finalErrorCriteria)
         return ColdRetrier(policy: policy, conditionPublisher: conditionPublisher)
     }
 
