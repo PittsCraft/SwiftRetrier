@@ -2,7 +2,7 @@ import Foundation
 
 public extension RetryPolicy {
 
-    func giveUp(on giveUpCriterium: @escaping (AttemptFailure) -> Bool) -> RetryPolicy {
+    func giveUp(on giveUpCriterium: @escaping @Sendable (AttemptFailure) -> Bool) -> RetryPolicy {
         GiveUpOnPolicyWrapper(wrapped: self, giveUpCriterium: giveUpCriterium)
     }
 
@@ -17,7 +17,7 @@ public extension RetryPolicy {
         })
     }
 
-    func giveUpOnErrors(matching finalErrorCriterium: @escaping (Error) -> Bool) -> RetryPolicy {
+    func giveUpOnErrors(matching finalErrorCriterium: @escaping @Sendable (Error) -> Bool) -> RetryPolicy {
         GiveUpOnPolicyWrapper(wrapped: self, giveUpCriterium: { finalErrorCriterium($0.error) })
     }
 }

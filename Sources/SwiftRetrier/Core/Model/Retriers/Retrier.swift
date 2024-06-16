@@ -1,8 +1,8 @@
 import Foundation
 import Combine
 
-public protocol Retrier: Cancellable, AnyObject {
-    associatedtype Output
+public protocol Retrier: Cancellable, AnyObject, Sendable {
+    associatedtype Output: Sendable
 
     func publisher() -> AnyPublisher<RetrierEvent<Output>, Never>
 }

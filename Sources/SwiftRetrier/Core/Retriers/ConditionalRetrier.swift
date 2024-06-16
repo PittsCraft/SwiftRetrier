@@ -20,7 +20,7 @@ import Combine
 ///
 /// If the condition publisher completes and it had not emitted any value or the last value it emitted was `false`
 /// then the retrier emits a completion embedding `RetryError.conditionPublisherCompleted` and finishes.
-public class ConditionalRetrier<Output>: SingleOutputRetrier {
+public class ConditionalRetrier<Output: Sendable>: SingleOutputRetrier, @unchecked Sendable {
 
     private let policy: RetryPolicy
     private let job: Job<Output>

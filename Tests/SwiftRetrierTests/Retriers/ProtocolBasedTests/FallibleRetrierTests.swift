@@ -20,6 +20,7 @@ class FallibleRetrierTests<R: Retrier>: XCTestCase {
         super.tearDown()
     }
 
+    @MainActor
     func test_Should_PublishCompletionEventWithError_When_JobFailsAndPolicyGivesUp() {
         let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1), immediateFailureJob)
         let expectation = expectation(description: "Failure completion received")
@@ -34,6 +35,7 @@ class FallibleRetrierTests<R: Retrier>: XCTestCase {
         cancellable.cancel()
     }
 
+    @MainActor
     func test_Should_CompleteSuccessPublisher_When_JobFailsAndPolicyGivesUp() {
         let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1), immediateFailureJob)
         let expectation = expectation(description: "Completion received")
@@ -46,10 +48,11 @@ class FallibleRetrierTests<R: Retrier>: XCTestCase {
         cancellable.cancel()
     }
 
+    @MainActor
     func test_Should_ThrowErrorInJob_When_RetrierIsCancelled() {
         let cancellationExpectation = expectation(description: "Cancellation catched")
         var fulfilled = false
-        let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1), {
+        let retrier = buildRetrier(Policy.testDefault(maxAttempts: 1), { @MainActor in
             do {
                 try await taskWait(defaultJobDuration)
             } catch {

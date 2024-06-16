@@ -41,11 +41,9 @@ class SingleOutputConditionalRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         } catch {}
     }
 
+    @MainActor
     func test_Should_SuccessfullyAwaitValue_When_ConditionPublisherCausesASecondTrialThatSucceeds() {
-        let job = {
-            try await taskWait()
-        }
-        let retrier = buildRetrier(trueFalseTruePublisher(), job)
+        let retrier = buildRetrier(trueFalseTruePublisher(), { try await taskWait() })
         let expectation = expectation(description: "Receive async output")
         Task {
             _ = try await retrier.value
@@ -56,12 +54,9 @@ class SingleOutputConditionalRetrierTests<R: SingleOutputRetrier>: XCTestCase {
 
     @MainActor
     func test_Should_CompletePublisherWithFinished_When_ConditionPublisherCausesASecondTrialThatSucceeds() async {
-        let job = {
-            try await taskWait()
-        }
         let expectation = expectation(description: "Finished")
 
-        let retrier = buildRetrier(trueFalseTruePublisher(), job)
+        let retrier = buildRetrier(trueFalseTruePublisher(), { try await taskWait() })
         let cancellable = retrier.publisher()
             .sink(receiveCompletion: {
                 if case .finished = $0 {
@@ -72,20 +67,20 @@ class SingleOutputConditionalRetrierTests<R: SingleOutputRetrier>: XCTestCase {
         cancellable.cancel()
     }
 
+    @MainActor
     func test_Should_ExecuteJobTheRightNumberOfTimes_When_ConditionPublisherInterruptsATrial() {
         var failedOnce = false
         var jobExecutionCount = 0
-        let job = {
+        let completionReceived = expectation(description: "Completion received")
+
+        let retrier = buildRetrier(trueFalseTruePublisher(), { @MainActor in
             jobExecutionCount += 1
             try await taskWait()
             if !failedOnce {
                 failedOnce = true
                 throw defaultError
             }
-        }
-        let completionReceived = expectation(description: "Completion received")
-
-        let retrier = buildRetrier(trueFalseTruePublisher(), job)
+        })
         let cancellable = retrier.publisher()
             .sink(receiveCompletion: { _ in
                 completionReceived.fulfill()

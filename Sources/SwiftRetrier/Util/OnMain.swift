@@ -1,6 +1,6 @@
 import Foundation
 
-func onMain(_ block: @escaping () -> Void) {
+func onMain(_ block: @escaping @Sendable () -> Void) {
     if Thread.isMainThread {
         block()
     } else {

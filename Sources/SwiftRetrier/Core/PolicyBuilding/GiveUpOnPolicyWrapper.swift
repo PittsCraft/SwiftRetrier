@@ -3,9 +3,9 @@ import Foundation
 public struct GiveUpOnPolicyWrapper: RetryPolicy {
 
     private let wrapped: RetryPolicy
-    private let giveUpCriterium: (AttemptFailure) -> Bool
+    private let giveUpCriterium: @Sendable (AttemptFailure) -> Bool
 
-    public init(wrapped: RetryPolicy, giveUpCriterium: @escaping (AttemptFailure) -> Bool) {
+    public init(wrapped: RetryPolicy, giveUpCriterium: @escaping @Sendable (AttemptFailure) -> Bool) {
         self.wrapped = wrapped
         self.giveUpCriterium = giveUpCriterium
     }
@@ -21,7 +21,10 @@ public struct GiveUpOnPolicyWrapper: RetryPolicy {
         return wrapped.shouldRetry(on: attemptFailure)
     }
 
-    public func freshCopy() -> RetryPolicy {
-        GiveUpOnPolicyWrapper(wrapped: wrapped.freshCopy(), giveUpCriterium: giveUpCriterium)
+    public func policyAfter(attemptFailure: AttemptFailure, delay: TimeInterval) -> any RetryPolicy {
+        GiveUpOnPolicyWrapper(
+            wrapped: wrapped.policyAfter(attemptFailure: attemptFailure, delay: delay),
+            giveUpCriterium: giveUpCriterium
+        )
     }
 }

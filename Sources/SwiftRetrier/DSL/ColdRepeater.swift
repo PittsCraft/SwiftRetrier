@@ -9,7 +9,7 @@ public struct ColdRepeater {
 
 public extension ColdRepeater {
 
-    func giveUp(on giveUpCriterium: @escaping (AttemptFailure) -> Bool) -> ColdRepeater {
+    func giveUp(on giveUpCriterium: @escaping @Sendable (AttemptFailure) -> Bool) -> ColdRepeater {
         let policy = policy.giveUp(on: giveUpCriterium)
         return ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
     }
@@ -24,7 +24,7 @@ public extension ColdRepeater {
         return ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
     }
 
-    func giveUpOnErrors(matching finalErrorCriterium: @escaping (Error) -> Bool) -> ColdRepeater {
+    func giveUpOnErrors(matching finalErrorCriterium: @escaping @Sendable (Error) -> Bool) -> ColdRepeater {
         let policy = policy.giveUpOnErrors(matching: finalErrorCriterium)
         return ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
     }

@@ -35,5 +35,6 @@ let package = Package(
             dependencies: ["SwiftRetrier"],
             plugins: [] + extraPlugins
         )
-    ]
+    ],
+    swiftLanguageVersions: [.version("6")]
 )
