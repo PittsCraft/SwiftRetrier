@@ -22,7 +22,7 @@ import Combine
 /// ```
 ///
 /// On cancellation, the publisher emits a completion embedding a `CancellationError`then finishes.
-public class Repeater<Output>: Retrier {
+public class Repeater<Output: Sendable>: Retrier, @unchecked Sendable {
 
     private let retrierBuilder: () -> AnySingleOutputRetrier<Output>
     private var retrier: AnySingleOutputRetrier<Output>?

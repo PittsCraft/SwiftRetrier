@@ -82,6 +82,7 @@ class ConditionalRetrierSpecificTests: XCTestCase {
         try await taskWait()
     }
 
+    @MainActor
     func test_execution_when_condition_true() {
         let condition = Just(true)
             .eraseToAnyPublisher()
@@ -123,20 +124,20 @@ class ConditionalRetrierSpecificTests: XCTestCase {
         cancellable.cancel()
     }
 
+    @MainActor
     func test_attempt_on_failure_propagated_during_second_trial() {
         var failedOnce = false
         var jobExecutionCount = 0
-        let job = {
+        let expectationOwnErrorPropagated = expectation(description: "Attempt own error propagated")
+
+        let retrier = buildRetrier(trueFalseTruePublisher(), { @MainActor in
             jobExecutionCount += 1
             try await taskWait()
             if !failedOnce {
                 failedOnce = true
                 throw defaultError
             }
-        }
-        let expectationOwnErrorPropagated = expectation(description: "Attempt own error propagated")
-
-        let retrier = buildRetrier(trueFalseTruePublisher(), job)
+        })
         let cancellable = retrier.publisher()
             .sink(receiveCompletion: { _ in },
                   receiveValue: {

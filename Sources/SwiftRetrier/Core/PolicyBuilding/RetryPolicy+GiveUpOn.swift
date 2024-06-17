@@ -2,22 +2,26 @@ import Foundation
 
 public extension RetryPolicy {
 
-    func giveUp(on giveUpCriterium: @escaping (AttemptFailure) -> Bool) -> RetryPolicy {
-        GiveUpOnPolicyWrapper(wrapped: self, giveUpCriterium: giveUpCriterium)
+    func giveUp(on giveUpCriteria: @escaping GiveUpCriteria) -> RetryPolicy {
+        GiveUpCriteriaPolicyWrapper(wrapped: self, giveUpCriteria: giveUpCriteria)
     }
 
     func giveUpAfter(maxAttempts: UInt) -> RetryPolicy {
-        GiveUpOnPolicyWrapper(wrapped: self, giveUpCriterium: { $0.index >= maxAttempts - 1})
+        GiveUpCriteriaPolicyWrapper(wrapped: self) { attempt, _ in
+            attempt.index >= maxAttempts - 1
+        }
     }
 
     func giveUpAfter(timeout: TimeInterval) -> RetryPolicy {
-        GiveUpOnPolicyWrapper(wrapped: self, giveUpCriterium: {
-            let nextAttemptStart = Date().addingTimeInterval(retryDelay(for: $0))
-            return nextAttemptStart >= $0.trialStart.addingTimeInterval(timeout)
-        })
+        GiveUpCriteriaPolicyWrapper(wrapped: self) { attempt, wrappedDelay in
+            let nextAttemptStart = Date().addingTimeInterval(wrappedDelay)
+            return nextAttemptStart >= attempt.trialStart.addingTimeInterval(timeout)
+        }
     }
 
-    func giveUpOnErrors(matching finalErrorCriterium: @escaping (Error) -> Bool) -> RetryPolicy {
-        GiveUpOnPolicyWrapper(wrapped: self, giveUpCriterium: { finalErrorCriterium($0.error) })
+    func giveUpOnErrors(matching finalErrorCriteria: @escaping @Sendable (Error) -> Bool) -> RetryPolicy {
+        GiveUpCriteriaPolicyWrapper(wrapped: self) { attempt, _ in
+            finalErrorCriteria(attempt.error)
+        }
     }
 }

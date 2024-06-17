@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+import Combine
 @testable import SwiftRetrier
 
 class RetrierTests<R: Retrier>: XCTestCase {
@@ -20,6 +21,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         super.tearDown()
     }
 
+    @MainActor
     func test_Should_PublishAttemptFailureWithJobError_When_JobFails() {
         let retrier = buildRetrier({ throw defaultError })
         let expectation = expectation(description: "Failure received")
@@ -34,6 +36,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         cancellable.cancel()
     }
 
+    @MainActor
     func test_Should_PublishAttemptSuccess_When_JobSucceeds() {
         let retrier = buildRetrier(immediateSuccessJob)
         let expectation = expectation(description: "Success received")
@@ -48,9 +51,10 @@ class RetrierTests<R: Retrier>: XCTestCase {
         cancellable.cancel()
     }
 
+    @MainActor
     func test_Should_PublishAttemptFailureThenAttemptSuccess_When_JobFailsThenSucceeds() {
         var calledOnce = false
-        let retrier = buildRetrier({
+        let retrier = buildRetrier({ @MainActor in
             if !calledOnce {
                 calledOnce = true
                 throw defaultError
@@ -108,6 +112,7 @@ class RetrierTests<R: Retrier>: XCTestCase {
         cancellable.cancel()
     }
 
+    @MainActor
     func test_Should_CompletePublisherWithFinished_When_RetrierIsCancelled() {
         let failureExpectation = expectation(description: "Failure received")
         let retrier = buildRetrier(immediateSuccessJob)
@@ -133,16 +138,17 @@ class RetrierTests<R: Retrier>: XCTestCase {
 
     @MainActor
     func test_Should_StillRetry_When_RetrierNotFinishedAndNotRetained() async throws {
-        var shouldSignalExecution = false
+        // Just working around capture issue
+        let shouldSignalExecution = CurrentValueSubject<Bool, Never>(false)
         var executed = false
-        weak var retrier = retrier {
-            if shouldSignalExecution {
+        weak var retrier = retrier { @MainActor in
+            if shouldSignalExecution.value {
                 executed = true
             }
             throw defaultError
         }
         try await taskWait()
-        shouldSignalExecution = true
+        shouldSignalExecution.value = true
         try await taskWait(defaultSequenceWaitingTime / 2)
         XCTAssertTrue(executed)
         retrier?.cancel()

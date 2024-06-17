@@ -10,14 +10,14 @@ import Combine
 /// the last attempt error, the publisher emits the attempt failure then a completion embedding  the attempt error.
 /// - **the retrier is canceled:** any awaiting on the `value` property will throw a `CancellationError`, the publisher
 /// emits a completion embedding the same error then finishes.
-public class SimpleRetrier<Output>: SingleOutputRetrier {
+public class SimpleRetrier<Output: Sendable>: SingleOutputRetrier, @unchecked Sendable {
 
     public let trialStart = Date()
     private let subject = PassthroughSubject<RetrierEvent<Output>, Never>()
     private var task: Task<Output, Error>!
 
     public init(policy: RetryPolicy, job: @escaping Job<Output>) {
-        self.task = createTask(policy: policy.freshCopy(), job: job)
+        self.task = createTask(policy: policy, job: job)
     }
 
     @MainActor
@@ -49,6 +49,7 @@ public class SimpleRetrier<Output>: SingleOutputRetrier {
             // Ensure we don't start before any ongoing business on main actor is finished
             await MainActor.run {}
             do {
+                var policy = policy
                 var attemptIndex: UInt = 0
                 while true {
                     try Task.checkCancellation()
@@ -60,7 +61,7 @@ public class SimpleRetrier<Output>: SingleOutputRetrier {
                         let attemptFailure = AttemptFailure(trialStart: trialStart, index: attemptIndex, error: error)
                         await sendAttemptFailure(attemptFailure)
                         try Task.checkCancellation()
-                        let retryDecision = await MainActor.run { [attemptIndex] in
+                        let retryDecision = await MainActor.run { [policy, attemptIndex] in
                             policy.shouldRetry(on: AttemptFailure(trialStart: trialStart,
                                                                   index: attemptIndex,
                                                                   error: error))
@@ -70,6 +71,7 @@ public class SimpleRetrier<Output>: SingleOutputRetrier {
                             throw error
                         case .retry(delay: let delay):
                             try await Task.sleep(nanoseconds: nanoseconds(delay))
+                            policy = policy.policyAfter(attemptFailure: attemptFailure, delay: delay)
                             attemptIndex += 1
                         }
                     }
