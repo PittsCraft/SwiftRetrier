@@ -28,13 +28,19 @@ let package = Package(
         .target(
             name: "SwiftRetrier",
             dependencies: [],
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency=complete")
+            ],
             plugins: [] + extraPlugins
         ),
         .testTarget(
             name: "SwiftRetrierTests",
             dependencies: ["SwiftRetrier"],
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency=complete")
+            ],
             plugins: [] + extraPlugins
         )
     ],
-    swiftLanguageVersions: [.version("6")]
+    swiftLanguageVersions: [.version("5.8")]
 )
