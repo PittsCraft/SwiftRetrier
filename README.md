@@ -135,6 +135,11 @@ You can add failure conditions using `giveUp*()` functions.
 You can create your own policies that conform `RetryPolicy` and they will benefit from the same modifiers.
 Have a look at `ConstantDelayRetryPolicy.swift` for a basic example.
 
+⚠️ Policies should be stateless. To ensure that, I recommend implementing them with `struct` types.
+
+If a policy needs to know about attempts history, ensure you propagate what's needed when implementing
+`policyAfter(attemptFailure:, delay:) -> any RetryPolicy`.
+
 To create a DSL entry point using your policy:
 
 ```swift
