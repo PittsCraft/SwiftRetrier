@@ -9,7 +9,7 @@ jobs:
     runs-on: macos-14
 
     steps:
-    - uses: swift-actions/setup-swift@v1
+    - uses: swift-actions/setup-swift@v2
       with:
         swift-version: '5.9'
     - uses: actions/checkout@v4
