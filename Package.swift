@@ -42,5 +42,5 @@ let package = Package(
             plugins: [] + extraPlugins
         )
     ],
-    swiftLanguageVersions: [.version("5.8")]
+    swiftLanguageVersions: [.version("5")]
 )
