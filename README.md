@@ -68,6 +68,26 @@ let value = try await withExponentialBackoff()
 Note that you can use `cancellableValue` instead of `value`. In this case, if the task wrapping the concurrency context
 is cancelled, the underlying retrier will be cancelled.
 
+## Simple events handling
+
+Retrier events can be handled simply.
+
+```swift
+fetcher.onEach {
+    switch $0 {
+        case .attemptSuccess(let value):
+            print("Fetched something: \(value)")
+        case .attemptFailure(let failure):
+            print("An attempt #\(failure.index) failed with \(failure.error)")
+        case .completion(let error):
+            print("Fetcher completed with \(error?.localizedDescription ?? "no error")")
+    }
+}
+```
+
+Keep in mind that the event handler will be retained until the retrier finishes (succeeding, failing or being 
+cancelled).
+
 ## Combine publishers
 
 All retriers (including repeaters) expose Combine publishers that publish relevant events.
