@@ -24,7 +24,7 @@ public extension ColdRepeater {
         return ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
     }
 
-    func giveUpOnErrors(matching finalErrorCriteria: @escaping @Sendable (Error) -> Bool) -> ColdRepeater {
+    func giveUpOnErrors(matching finalErrorCriteria: @escaping @Sendable @MainActor (Error) -> Bool) -> ColdRepeater {
         let policy = policy.giveUpOnErrors(matching: finalErrorCriteria)
         return ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
     }

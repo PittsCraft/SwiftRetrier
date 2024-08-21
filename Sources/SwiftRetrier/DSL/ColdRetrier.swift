@@ -23,7 +23,7 @@ public extension ColdRetrier {
         return ColdRetrier(policy: policy, conditionPublisher: conditionPublisher)
     }
 
-    func giveUpOnErrors(matching finalErrorCriteria: @escaping @Sendable (Error) -> Bool) -> ColdRetrier {
+    func giveUpOnErrors(matching finalErrorCriteria: @escaping @Sendable @MainActor (Error) -> Bool) -> ColdRetrier {
         let policy = policy.giveUpOnErrors(matching: finalErrorCriteria)
         return ColdRetrier(policy: policy, conditionPublisher: conditionPublisher)
     }
