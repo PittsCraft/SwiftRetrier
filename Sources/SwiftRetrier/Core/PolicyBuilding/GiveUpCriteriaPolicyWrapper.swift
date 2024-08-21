@@ -1,6 +1,6 @@
 import Foundation
 
-public typealias GiveUpCriteria = @Sendable (
+public typealias GiveUpCriteria = @MainActor @Sendable (
     _ attemptFailure: AttemptFailure,
     _ nestedPolicyDelay: TimeInterval
 ) -> Bool
@@ -15,6 +15,7 @@ public struct GiveUpCriteriaPolicyWrapper: RetryPolicy {
         self.giveUpCriteria = giveUpCriteria
     }
 
+    @MainActor
     public func shouldRetry(on attemptFailure: AttemptFailure) -> RetryDecision {
         return switch wrapped.shouldRetry(on: attemptFailure) {
         case .giveUp:
@@ -28,6 +29,7 @@ public struct GiveUpCriteriaPolicyWrapper: RetryPolicy {
         }
     }
 
+    @MainActor
     public func policyAfter(attemptFailure: AttemptFailure, delay: TimeInterval) -> any RetryPolicy {
         GiveUpCriteriaPolicyWrapper(
             wrapped: wrapped.policyAfter(attemptFailure: attemptFailure, delay: delay),
