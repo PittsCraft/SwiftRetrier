@@ -71,7 +71,9 @@ public class SimpleRetrier<Output: Sendable>: SingleOutputRetrier, @unchecked Se
                             throw error
                         case .retry(delay: let delay):
                             try await Task.sleep(nanoseconds: nanoseconds(delay))
-                            policy = policy.policyAfter(attemptFailure: attemptFailure, delay: delay)
+                            policy = await MainActor.run { [policy] in
+                                policy.policyAfter(attemptFailure: attemptFailure, delay: delay)
+                            }
                             attemptIndex += 1
                         }
                     }

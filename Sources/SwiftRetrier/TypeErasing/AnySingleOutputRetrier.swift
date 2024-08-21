@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-public class AnySingleOutputRetrier<Value: Sendable>: AnyRetrier<Value>, SingleOutputRetrier, @unchecked Sendable {
+public class AnySingleOutputRetrier<Value: Sendable>: AnyRetrier<Value>, SingleOutputRetrier {
 
     private let outputBlock: @Sendable () async throws -> Output
 
