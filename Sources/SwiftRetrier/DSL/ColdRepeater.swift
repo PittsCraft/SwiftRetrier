@@ -1,7 +1,7 @@
 import Foundation
-import Combine
+@preconcurrency import Combine
 
-public struct ColdRepeater {
+public struct ColdRepeater: Sendable {
     let policy: RetryPolicy
     let repeatDelay: TimeInterval
     let conditionPublisher: AnyPublisher<Bool, Never>?

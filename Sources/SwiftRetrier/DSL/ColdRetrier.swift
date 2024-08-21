@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-public struct ColdRetrier {
+public struct ColdRetrier: @unchecked Sendable {
     let policy: RetryPolicy
     let conditionPublisher: AnyPublisher<Bool, Never>?
 }

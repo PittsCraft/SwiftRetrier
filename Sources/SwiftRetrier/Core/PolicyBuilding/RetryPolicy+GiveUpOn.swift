@@ -19,7 +19,7 @@ public extension RetryPolicy {
         }
     }
 
-    func giveUpOnErrors(matching finalErrorCriteria: @escaping @Sendable (Error) -> Bool) -> RetryPolicy {
+    func giveUpOnErrors(matching finalErrorCriteria: @escaping @Sendable @MainActor (Error) -> Bool) -> RetryPolicy {
         GiveUpCriteriaPolicyWrapper(wrapped: self) { attempt, _ in
             finalErrorCriteria(attempt.error)
         }
