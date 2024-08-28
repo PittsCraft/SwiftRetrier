@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 public protocol RetrierEventProtocol {
-    associatedtype Output
+    associatedtype Output: Sendable
 
     var asRetrierEvent: RetrierEvent<Output> { get }
 }

@@ -39,6 +39,10 @@ public extension ColdRetrier {
         ColdRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
     }
 
+    func job<T>(job: @escaping Job<T>) -> ColdJobRetrier<T> {
+        ColdJobRetrier(policy: policy, conditionPublisher: conditionPublisher, job: job)
+    }
+
     @discardableResult
     func execute<Output: Sendable>(_ job: @escaping Job<Output>) -> AnySingleOutputRetrier<Output> {
         if let conditionPublisher {
