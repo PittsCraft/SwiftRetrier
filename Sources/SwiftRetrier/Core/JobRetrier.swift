@@ -1,7 +1,7 @@
 import Foundation
 @preconcurrency import Combine
 
-public struct ColdJobRetrier<T: Sendable>: @unchecked Sendable {
+public struct JobRetrier<T: Sendable>: @unchecked Sendable {
     public typealias Failure = Never
     public typealias Output = RetrierEvent<T>
 
@@ -11,14 +11,14 @@ public struct ColdJobRetrier<T: Sendable>: @unchecked Sendable {
     let job: Job<T>
 }
 
-extension ColdJobRetrier: Publisher {
+extension JobRetrier: Publisher {
 
     public func receive<S>(subscriber: S) where S : Subscriber, Never == S.Failure, RetrierEvent<T> == S.Input {
         publisher.receive(subscriber: subscriber)
     }
 }
 
-public extension ColdJobRetrier {
+public extension JobRetrier {
 
     var value: T {
         get async throws {
@@ -29,83 +29,7 @@ public extension ColdJobRetrier {
     }
 }
 
-public extension ColdJobRetrier {
-
-    func repeating(withDelay repeatDelay: TimeInterval) -> ColdJobRepeater<T> {
-        ColdJobRepeater(
-            policy: policy,
-            repeatDelay: repeatDelay,
-            conditionPublisher: conditionPublisher,
-            receiveEvent: receiveEvent,
-            job: job
-        )
-    }
-
-    func giveUp(on giveUpCriteria: @escaping GiveUpCriteria) -> ColdJobRetrier {
-        let policy = policy.giveUp(on: giveUpCriteria)
-        return ColdJobRetrier(
-            policy: policy,
-            conditionPublisher: conditionPublisher,
-            receiveEvent: receiveEvent,
-            job: job
-        )
-    }
-
-    func giveUpAfter(maxAttempts: UInt) -> ColdJobRetrier {
-        let policy = policy.giveUpAfter(maxAttempts: maxAttempts)
-        return ColdJobRetrier(
-            policy: policy,
-            conditionPublisher: conditionPublisher,
-            receiveEvent: receiveEvent,
-            job: job
-        )
-    }
-
-    func giveUpAfter(timeout: TimeInterval) -> ColdJobRetrier {
-        let policy = policy.giveUpAfter(timeout: timeout)
-        return ColdJobRetrier(
-            policy: policy,
-            conditionPublisher: conditionPublisher,
-            receiveEvent: receiveEvent,
-            job: job
-        )
-    }
-
-    func giveUpOnErrors(matching finalErrorCriteria: @escaping @Sendable @MainActor (Error) -> Bool) -> ColdJobRetrier {
-        let policy = policy.giveUpOnErrors(matching: finalErrorCriteria)
-        return ColdJobRetrier(
-            policy: policy,
-            conditionPublisher: conditionPublisher,
-            receiveEvent: receiveEvent,
-            job: job
-        )
-    }
-
-    func onlyWhen<P>(
-        _ conditionPublisher: P
-    ) -> ColdJobRetrier where P: Publisher, P.Output == Bool, P.Failure == Never {
-        ColdJobRetrier(
-            policy: policy,
-            conditionPublisher: conditionPublisher.combineWith(condition: self.conditionPublisher),
-            receiveEvent: receiveEvent,
-            job: job
-        )
-    }
-
-    func handleRetrierEvents(receiveEvent: @escaping @Sendable @MainActor (RetrierEvent<T>) -> Void) -> ColdJobRetrier {
-        return ColdJobRetrier(
-            policy: policy,
-            conditionPublisher: conditionPublisher,
-            receiveEvent: {
-                self.receiveEvent($0)
-                receiveEvent($0)
-            },
-            job: job
-        )
-    }
-}
-
-private extension ColdJobRetrier {
+private extension JobRetrier {
 
     @MainActor
     func nextDataOnFailure(_ failure: AttemptFailure, data: TrialData) -> TrialData? {
@@ -158,6 +82,36 @@ private extension ColdJobRetrier {
             .eraseToAnyPublisher()
         subject.send(.init(start: Date(), attemptIndex: 0, retryPolicy: policy, delay: 0))
         return result
+    }
+
+    func conditionalPublisher(
+        conditionPublisher: AnyPublisher<Bool, Never>?,
+        trialPublisher: AnyPublisher<RetrierEvent<T>, Never>
+    ) -> AnyPublisher<RetrierEvent<T>, Never> {
+        let conditionPublisher = conditionPublisher ?? Just(true).eraseToAnyPublisher()
+        let conditionSubject = CurrentValueSubject<Bool, Never>(false)
+        let subscription = conditionPublisher
+            .sink {
+                conditionSubject.value = $0
+            }
+        return conditionSubject
+            .map { condition in
+                if condition {
+                    trialPublisher
+                        .handleEvents(receiveCompletion: { _ in
+                            subscription.cancel()
+                            conditionSubject.send(completion: .finished)
+                        }, receiveCancel: {
+                            subscription.cancel()
+                            conditionSubject.send(completion: .finished)
+                        })
+                        .eraseToAnyPublisher()
+                } else {
+                    Empty<RetrierEvent<T>, Never>().eraseToAnyPublisher()
+                }
+            }
+            .switchToLatest()
+            .eraseToAnyPublisher()
     }
 
     var publisher: AnyPublisher<RetrierEvent<T>, Never> {

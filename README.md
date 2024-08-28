@@ -163,9 +163,9 @@ If a policy needs to know about attempts history, ensure you propagate what's ne
 To create a DSL entry point using your policy:
 
 ```swift
-public func withMyOwnPolicy() -> ColdRetrier {
+public func withMyOwnPolicy() -> Retrier {
     let policy = MyOwnPolicy()
-    return ColdRetrier(policy: policy, conditionPublisher: nil)
+    return Retrier(policy: policy, conditionPublisher: nil)
 }
 ```
 
