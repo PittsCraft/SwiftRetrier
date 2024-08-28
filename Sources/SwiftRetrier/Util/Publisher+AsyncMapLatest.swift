@@ -33,7 +33,3 @@ public extension Publisher where Output: Sendable {
             .eraseToAnyPublisher()
     }
 }
-
-private struct FakeSendableError<T: Error>: @unchecked Sendable, Error {
-    let value: T
-}

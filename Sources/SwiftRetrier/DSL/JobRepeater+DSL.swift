@@ -60,7 +60,7 @@ public extension JobRepeater {
     }
 
     func handleRetrierEvents(receiveEvent: @escaping @Sendable @MainActor (RetrierEvent<T>) -> Void) -> JobRepeater {
-        return JobRepeater(
+        JobRepeater(
             policy: policy,
             repeatDelay: repeatDelay,
             conditionPublisher: conditionPublisher,
