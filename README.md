@@ -2,7 +2,9 @@
 
 🪨 Rock-solid, concise and thorough library to retry and repeat `async throws` jobs.
 
-## A cold retrier with all options ❄️
+*Swift 6 mode and `MainActor` friendly* 🥳
+
+## A retrier with all options ❄️
 
 ```swift
 var conditionPublisher: AnyPublisher<Bool, Never>
@@ -60,7 +62,7 @@ let fetcherWithEventHandler = fetcher.handleRetrierEvents {
 ## Collect 🔥
 
 All job retriers are cold publishers and:
-- **each subscription will create a new independent retrying stream**
+- **each subscription will create a new independent retrying stream** 🔥
 - **cancelling the subscription cancels the retrier**
 
 Once in the Combine world, you'll know what to do (else check next paragraph).
@@ -162,6 +164,16 @@ public func withMyOwnPolicy() -> Retrier {
     return Retrier(policy: policy, conditionPublisher: nil)
 }
 ```
+
+## Migration from v0 or v1
+
+- Now, retriers are cold until consumed *because* the old behavior was mostly useless and complicated - even dangerous
+- All cancellations are propagated by default *because* I never found any use to preventing that but observed mistakes
+ frequently. Up to you to not cancel if you don't want to.
+- `execute()` -> `job()` *because* this modifier doesn't trigger execution anymore
+- forget about `publisher()`, the job retrier/repeater IS the publisher *because* there's no reason to add an extra step
+
+I'm convinced these changes are for the best, and the API should not change much in the future.
 
 ## Contribute
 
