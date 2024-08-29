@@ -7,21 +7,14 @@ public extension RetryPolicy {
     }
 
     func giveUpAfter(maxAttempts: UInt) -> RetryPolicy {
-        GiveUpCriteriaPolicyWrapper(wrapped: self) { attempt, _ in
-            attempt.index >= maxAttempts - 1
-        }
+        GiveUpCriteriaPolicyWrapper(wrapped: self, giveUpCriteria: GiveUpCriterias.maxAttempts(maxAttempts))
     }
 
     func giveUpAfter(timeout: TimeInterval) -> RetryPolicy {
-        GiveUpCriteriaPolicyWrapper(wrapped: self) { attempt, wrappedDelay in
-            let nextAttemptStart = Date().addingTimeInterval(wrappedDelay)
-            return nextAttemptStart >= attempt.trialStart.addingTimeInterval(timeout)
-        }
+        GiveUpCriteriaPolicyWrapper(wrapped: self, giveUpCriteria: GiveUpCriterias.timeout(timeout))
     }
 
     func giveUpOnErrors(matching finalErrorCriteria: @escaping @Sendable @MainActor (Error) -> Bool) -> RetryPolicy {
-        GiveUpCriteriaPolicyWrapper(wrapped: self) { attempt, _ in
-            finalErrorCriteria(attempt.error)
-        }
+        GiveUpCriteriaPolicyWrapper(wrapped: self, giveUpCriteria: GiveUpCriterias.finalError(finalErrorCriteria))
     }
 }

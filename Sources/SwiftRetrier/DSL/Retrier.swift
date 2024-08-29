@@ -6,29 +6,14 @@ public struct Retrier: @unchecked Sendable {
     let conditionPublisher: AnyPublisher<Bool, Never>?
 }
 
-public extension Retrier {
+extension Retrier: RetrierBuilder {
 
-    func giveUp(on giveUpCriteria: @escaping GiveUpCriteria) -> Retrier {
+    public func giveUp(on giveUpCriteria: @escaping GiveUpCriteria) -> Retrier {
         let policy = policy.giveUp(on: giveUpCriteria)
         return Retrier(policy: policy, conditionPublisher: conditionPublisher)
     }
 
-    func giveUpAfter(maxAttempts: UInt) -> Retrier {
-        let policy = policy.giveUpAfter(maxAttempts: maxAttempts)
-        return Retrier(policy: policy, conditionPublisher: conditionPublisher)
-    }
-
-    func giveUpAfter(timeout: TimeInterval) -> Retrier {
-        let policy = policy.giveUpAfter(timeout: timeout)
-        return Retrier(policy: policy, conditionPublisher: conditionPublisher)
-    }
-
-    func giveUpOnErrors(matching finalErrorCriteria: @escaping @Sendable @MainActor (Error) -> Bool) -> Retrier {
-        let policy = policy.giveUpOnErrors(matching: finalErrorCriteria)
-        return Retrier(policy: policy, conditionPublisher: conditionPublisher)
-    }
-
-    func onlyWhen<P>(
+    public func onlyWhen<P>(
         _ conditionPublisher: P
     ) -> Retrier where P: Publisher, P.Output == Bool, P.Failure == Never {
         Retrier(
@@ -36,6 +21,9 @@ public extension Retrier {
             conditionPublisher: conditionPublisher.combineWith(condition: self.conditionPublisher)
         )
     }
+}
+
+public extension Retrier {
 
     func repeating(withDelay repeatDelay: TimeInterval) -> Repeater {
         Repeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)

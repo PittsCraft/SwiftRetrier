@@ -1,10 +1,5 @@
 import Foundation
 
-public typealias GiveUpCriteria = @MainActor @Sendable (
-    _ attemptFailure: AttemptFailure,
-    _ nestedPolicyDelay: TimeInterval
-) -> Bool
-
 public struct GiveUpCriteriaPolicyWrapper: RetryPolicy {
 
     private let wrapped: RetryPolicy
