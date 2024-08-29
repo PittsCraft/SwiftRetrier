@@ -23,7 +23,20 @@ public extension JobRetrier {
     var value: Value {
         get async throws {
             try await publisher
-                .success()
+                .tryCompactMap {
+                    switch $0 {
+                    case .attemptSuccess(let value):
+                        value
+                    case .attemptFailure:
+                        nil
+                    case .completion(let error):
+                        if let error {
+                            throw error
+                        } else {
+                            nil
+                        }
+                    }
+                }
                 .cancellableFirst
         }
     }
