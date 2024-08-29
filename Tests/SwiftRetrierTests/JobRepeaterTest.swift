@@ -117,5 +117,52 @@ final class JobRepeaterTest: XCTestCase {
         subscription.cancel()
     }
 
-    
+    func test_When_conditionCompletesAfterFalse_Should_completePublisher() {
+        let completed = CurrentValueSubject<Bool, Never>(false)
+        let subscription = JobRepeater(
+            policy: ConstantDelayRetryPolicy(delay: 0),
+            repeatDelay: 0,
+            conditionPublisher: Just(false).eraseToAnyPublisher(),
+            job: {
+                XCTFail("Job should not be executed")
+            }
+        ).sink(receiveCompletion: { completion in
+            switch completion {
+            case .finished:
+                completed.value = true
+            case .failure:
+                XCTFail("Unexpected failure")
+            }
+        }, receiveValue: { event in
+            XCTFail("Unexpected event \(event)")
+        })
+        XCTAssertTrue(completed.value)
+        subscription.cancel()
+    }
+
+    @MainActor
+    func test_When_conditionCompletesAfterTrue_Should_receiveMultipleSuccessNoCompletion() async throws {
+        let expectation = expectation(description: "Received at least 10 successes")
+        let count = CurrentValueSubject<Int, Never>(0)
+        let subscription = JobRepeater(
+            policy: ConstantDelayRetryPolicy(delay: 0),
+            repeatDelay: 0,
+            conditionPublisher: Just(true).eraseToAnyPublisher(),
+            job: { true }
+        ).sink(receiveCompletion: { completion in
+            XCTFail("Unexpected completion")
+        }, receiveValue: {
+            switch $0 {
+            case .attemptSuccess:
+                count.value += 1
+                if count.value == 10 {
+                    expectation.fulfill()
+                }
+            default:
+                XCTFail("Unexpected event received \($0)")
+            }
+        })
+        await fulfillment(of: [expectation], timeout: 1000)
+        subscription.cancel()
+    }
 }

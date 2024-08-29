@@ -25,6 +25,17 @@ private extension JobRepeater {
         LazyPublisherBuilder {
             let singlePublisher = JobRetrier(policy: policy, conditionPublisher: conditionPublisher, job: job)
             let repeatSubject = CurrentValueSubject<TimeInterval, Never>(0)
+            let conditionPublisher = Just(true).combineWith(condition: conditionPublisher).eraseToAnyPublisher()
+            let conditionSubject = CurrentValueSubject<Bool, Never>(false)
+            let conditionSubscription = conditionPublisher
+                .handleEvents(receiveCompletion: { completion in
+                    if !conditionSubject.value {
+                        repeatSubject.send(completion: .finished)
+                    }
+                })
+                .sink {
+                    conditionSubject.value = $0
+                }
             return repeatSubject
                 .map {
                     Just(())
@@ -39,6 +50,7 @@ private extension JobRepeater {
                                         repeatSubject.send(repeatDelay)
                                         return nil
                                     } else {
+                                        conditionSubscription.cancel()
                                         repeatSubject.send(completion: .finished)
                                         return event
                                     }
