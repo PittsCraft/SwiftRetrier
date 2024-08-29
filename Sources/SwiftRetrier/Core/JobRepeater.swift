@@ -23,7 +23,7 @@ private extension JobRepeater {
 
     var publisher: AnyPublisher<RetrierEvent<Value>, Never> {
         let singlePublisher = JobRetrier(policy: policy, conditionPublisher: conditionPublisher, job: job)
-        let repeatSubject = PassthroughSubject<TimeInterval, Never>()
+        let repeatSubject = CurrentValueSubject<TimeInterval, Never>(0)
         return repeatSubject
             .map {
                 Just(())

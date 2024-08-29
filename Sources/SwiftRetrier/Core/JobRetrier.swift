@@ -89,7 +89,7 @@ private extension JobRetrier {
         conditionPublisher: AnyPublisher<Bool, Never>?,
         trialPublisher: AnyPublisher<RetrierEvent<Value>, Never>
     ) -> AnyPublisher<RetrierEvent<Value>, Never> {
-        let conditionPublisher = conditionPublisher ?? Just(true).eraseToAnyPublisher()
+        let conditionPublisher = Just(true).combineWith(condition: conditionPublisher).eraseToAnyPublisher()
         let conditionSubject = CurrentValueSubject<Bool, Never>(false)
         let subscription = conditionPublisher
             .sink {

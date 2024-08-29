@@ -1,10 +1,3 @@
-//
-//  RetrierPublisherTest.swift
-//  
-//
-//  Created by Pierre Mardon on 28/08/2024.
-//
-
 import XCTest
 @testable import SwiftRetrier
 @preconcurrency import Combine
@@ -29,7 +22,6 @@ final class JobRetrierTest: XCTestCase {
         XCTAssertTrue(zip(sequence1, sequence2).allSatisfy { sameEvents($0, $1) }, "Events should be the same")
     }
 
-    @MainActor
     func test_When_jobSuceeds_Should_completeProperly() {
         let expectedSequence: [RetrierEvent<Bool>] = [
             .attemptSuccess(true),
@@ -44,12 +36,11 @@ final class JobRetrierTest: XCTestCase {
             .sink {
                 sequence.append($0)
             }
-        wait(for: [expectation], timeout: defaultTimeOut)
+        wait(for: [expectation], timeout: defaultTimeout)
         assertSameSequence(expectedSequence, sequence)
         cancellable.cancel()
     }
 
-    @MainActor
     func test_When_jobFailsPolicyGivesUp_Should_completeProperly() {
         let expectedSequence: [RetrierEvent<Bool>] = [
             .attemptFailure(.init(trialStart: Date(), index: 0, error: TestError())),
@@ -68,12 +59,11 @@ final class JobRetrierTest: XCTestCase {
             .sink {
                 sequence.append($0)
             }
-        wait(for: [expectation], timeout: defaultTimeOut)
+        wait(for: [expectation], timeout: defaultTimeout)
         assertSameSequence(expectedSequence, sequence)
         cancellable.cancel()
     }
 
-    @MainActor
     func test_When_jobFailsFirstTime_Should_retry() {
         let expectedSequence: [RetrierEvent<Bool>] = [
             .attemptFailure(.init(trialStart: Date(), index: 0, error: TestError())),
@@ -101,7 +91,7 @@ final class JobRetrierTest: XCTestCase {
             .sink {
                 sequence.append($0)
             }
-        wait(for: [expectation], timeout: defaultTimeOut)
+        wait(for: [expectation], timeout: defaultTimeout)
         assertSameSequence(expectedSequence, sequence)
         cancellable.cancel()
     }
