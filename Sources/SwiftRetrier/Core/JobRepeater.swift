@@ -14,7 +14,7 @@ public struct JobRepeater<Value: Sendable>: Sendable {
 
 extension JobRepeater: Publisher {
 
-    public func receive<S>(subscriber: S) where S : Subscriber, Failure == S.Failure, Output == S.Input {
+    public func receive<S>(subscriber: S) where S: Subscriber, Failure == S.Failure, Output == S.Input {
         publisher.receive(subscriber: subscriber)
     }
 }
@@ -28,7 +28,7 @@ private extension JobRepeater {
             let conditionPublisher = Just(true).combineWith(condition: conditionPublisher).eraseToAnyPublisher()
             let conditionSubject = CurrentValueSubject<Bool, Never>(false)
             let conditionSubscription = conditionPublisher
-                .handleEvents(receiveCompletion: { completion in
+                .handleEvents(receiveCompletion: { _ in
                     if !conditionSubject.value {
                         repeatSubject.send(completion: .finished)
                     }
@@ -67,5 +67,3 @@ private extension JobRepeater {
         .eraseToAnyPublisher()
     }
 }
-
-

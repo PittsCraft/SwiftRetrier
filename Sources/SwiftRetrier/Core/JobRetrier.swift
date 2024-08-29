@@ -13,7 +13,7 @@ public struct JobRetrier<Value: Sendable>: @unchecked Sendable {
 
 extension JobRetrier: Publisher {
 
-    public func receive<S>(subscriber: S) where S : Subscriber, Never == S.Failure, RetrierEvent<Value> == S.Input {
+    public func receive<S>(subscriber: S) where S: Subscriber, Never == S.Failure, RetrierEvent<Value> == S.Input {
         publisher.receive(subscriber: subscriber)
     }
 }

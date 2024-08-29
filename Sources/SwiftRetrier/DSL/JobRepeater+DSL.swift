@@ -26,7 +26,9 @@ extension JobRepeater: JobRetrierBuilder {
         )
     }
 
-    public func handleRetrierEvents(receiveEvent: @escaping @Sendable @MainActor (RetrierEvent<Value>) -> Void) -> JobRepeater {
+    public func handleRetrierEvents(
+        receiveEvent: @escaping @Sendable @MainActor (RetrierEvent<Value>) -> Void
+    ) -> JobRepeater {
         JobRepeater(
             policy: policy,
             repeatDelay: repeatDelay,

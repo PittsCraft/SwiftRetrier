@@ -7,7 +7,8 @@ public extension Publisher where Output: Sendable {
 
     /// Map output using an async closure.
     ///
-    /// Each task running the async closure is cancelled as soon as another output is published or a subscription is cancelled.
+    /// Each task running the async closure is cancelled as soon as another 
+    /// output is published or a subscription is cancelled.
     ///
     /// - Parameters:
     ///  - transform: transform closure

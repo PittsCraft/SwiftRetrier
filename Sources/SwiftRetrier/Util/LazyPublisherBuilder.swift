@@ -7,7 +7,7 @@ struct LazyPublisherBuilder<P: Publisher>: Publisher {
 
     let builder: () -> P
 
-    func receive<S>(subscriber: S) where S : Subscriber, P.Failure == S.Failure, P.Output == S.Input {
+    func receive<S>(subscriber: S) where S: Subscriber, P.Failure == S.Failure, P.Output == S.Input {
         builder().receive(subscriber: subscriber)
     }
 }

@@ -1,5 +1,5 @@
 import Foundation
-@preconcurrency import Combine
+import Combine
 
 // From https://medium.com/geekculture/from-combine-to-async-await-c08bf1d15b77
 enum AsyncError: Error {

@@ -1,6 +1,6 @@
 import XCTest
 @testable import SwiftRetrier
-@preconcurrency import Combine
+import Combine
 
 final class JobRepeaterTest: XCTestCase {
 
@@ -149,7 +149,7 @@ final class JobRepeaterTest: XCTestCase {
             repeatDelay: 0,
             conditionPublisher: Just(true).eraseToAnyPublisher(),
             job: { true }
-        ).sink(receiveCompletion: { completion in
+        ).sink(receiveCompletion: { _ in
             XCTFail("Unexpected completion")
         }, receiveValue: {
             switch $0 {

@@ -1,8 +1,10 @@
-# SwiftRetrier
+# SwiftRetrier v2
 
 🪨 Rock-solid, concise and thorough library to retry and repeat `async throws` jobs.
 
 *Swift 6 mode and `MainActor` friendly* 🥳
+
+[Migrating from v0 or v1?](#migration-from-v0-or-v1)
 
 ## A retrier with all options ❄️
 

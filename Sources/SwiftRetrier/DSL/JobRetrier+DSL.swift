@@ -24,7 +24,9 @@ extension JobRetrier: JobRetrierBuilder {
         )
     }
 
-    public func handleRetrierEvents(receiveEvent: @escaping @Sendable @MainActor (RetrierEvent<Value>) -> Void) -> JobRetrier {
+    public func handleRetrierEvents(
+        receiveEvent: @escaping @Sendable @MainActor (RetrierEvent<Value>) -> Void
+    ) -> JobRetrier {
         return JobRetrier(
             policy: policy,
             conditionPublisher: conditionPublisher,
@@ -49,4 +51,3 @@ public extension JobRetrier {
         )
     }
 }
-

@@ -1,6 +1,4 @@
 // swift-tools-version: 5.8
-// The swift-tools-version declares the minimum version of Swift required to build this package.
-
 import PackageDescription
 
 let lint = false
@@ -8,7 +6,7 @@ let lint = false
 var extraDependencies: [Package.Dependency] = []
 var extraPlugins: [Target.PluginUsage] = []
 if lint {
-    extraDependencies = [.package(url: "https://github.com/realm/SwiftLint.git", from: "0.55.1")]
+    extraDependencies = [.package(url: "https://github.com/realm/SwiftLint.git", from: "0.56.2")]
     extraPlugins = [.plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")]
 }
 
