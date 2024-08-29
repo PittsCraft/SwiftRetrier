@@ -3,7 +3,7 @@ import Combine
 
 public extension JobRetrier {
 
-    func repeating(withDelay repeatDelay: TimeInterval) -> JobRepeater<T> {
+    func repeating(withDelay repeatDelay: TimeInterval) -> JobRepeater<Value> {
         JobRepeater(
             policy: policy,
             repeatDelay: repeatDelay,
@@ -64,7 +64,7 @@ public extension JobRetrier {
         )
     }
 
-    func handleRetrierEvents(receiveEvent: @escaping @Sendable @MainActor (RetrierEvent<T>) -> Void) -> JobRetrier {
+    func handleRetrierEvents(receiveEvent: @escaping @Sendable @MainActor (RetrierEvent<Value>) -> Void) -> JobRetrier {
         return JobRetrier(
             policy: policy,
             conditionPublisher: conditionPublisher,

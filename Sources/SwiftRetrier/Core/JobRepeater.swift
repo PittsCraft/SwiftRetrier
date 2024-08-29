@@ -1,15 +1,15 @@
 import Foundation
 @preconcurrency import Combine
 
-public struct JobRepeater<T: Sendable>: Sendable {
+public struct JobRepeater<Value: Sendable>: Sendable {
     public typealias Failure = Never
-    public typealias Output = RetrierEvent<T>
+    public typealias Output = RetrierEvent<Value>
 
     let policy: RetryPolicy
     let repeatDelay: TimeInterval
     let conditionPublisher: AnyPublisher<Bool, Never>?
-    var receiveEvent: @Sendable @MainActor (RetrierEvent<T>) -> Void = { _ in }
-    let job: Job<T>
+    var receiveEvent: @Sendable @MainActor (RetrierEvent<Value>) -> Void = { _ in }
+    let job: Job<Value>
 }
 
 extension JobRepeater: Publisher {
@@ -21,7 +21,7 @@ extension JobRepeater: Publisher {
 
 private extension JobRepeater {
 
-    var publisher: AnyPublisher<RetrierEvent<T>, Never> {
+    var publisher: AnyPublisher<RetrierEvent<Value>, Never> {
         let singlePublisher = JobRetrier(policy: policy, conditionPublisher: conditionPublisher, job: job)
         let repeatSubject = PassthroughSubject<TimeInterval, Never>()
         return repeatSubject

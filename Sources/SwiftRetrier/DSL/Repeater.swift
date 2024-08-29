@@ -38,4 +38,8 @@ public extension Repeater {
             conditionPublisher: conditionPublisher.combineWith(condition: self.conditionPublisher)
         )
     }
+
+    func job<T>(_ job: @escaping Job<T>) -> JobRepeater<T> {
+        JobRepeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher, job: job)
+    }
 }

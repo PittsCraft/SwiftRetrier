@@ -59,7 +59,7 @@ public extension JobRepeater {
         )
     }
 
-    func handleRetrierEvents(receiveEvent: @escaping @Sendable @MainActor (RetrierEvent<T>) -> Void) -> JobRepeater {
+    func handleRetrierEvents(receiveEvent: @escaping @Sendable @MainActor (RetrierEvent<Value>) -> Void) -> JobRepeater {
         JobRepeater(
             policy: policy,
             repeatDelay: repeatDelay,

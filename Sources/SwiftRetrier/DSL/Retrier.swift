@@ -41,7 +41,7 @@ public extension Retrier {
         Repeater(policy: policy, repeatDelay: repeatDelay, conditionPublisher: conditionPublisher)
     }
 
-    func job<T>(job: @escaping Job<T>) -> JobRetrier<T> {
+    func job<T>(_ job: @escaping Job<T>) -> JobRetrier<T> {
         JobRetrier(policy: policy, conditionPublisher: conditionPublisher, job: job)
     }
 }

@@ -1,26 +1,26 @@
 import Foundation
 @preconcurrency import Combine
 
-public struct JobRetrier<T: Sendable>: @unchecked Sendable {
+public struct JobRetrier<Value: Sendable>: @unchecked Sendable {
     public typealias Failure = Never
-    public typealias Output = RetrierEvent<T>
+    public typealias Output = RetrierEvent<Value>
 
     let policy: RetryPolicy
     let conditionPublisher: AnyPublisher<Bool, Never>?
-    var receiveEvent: @Sendable @MainActor (RetrierEvent<T>) -> Void = { _ in }
-    let job: Job<T>
+    var receiveEvent: @Sendable @MainActor (RetrierEvent<Value>) -> Void = { _ in }
+    let job: Job<Value>
 }
 
 extension JobRetrier: Publisher {
 
-    public func receive<S>(subscriber: S) where S : Subscriber, Never == S.Failure, RetrierEvent<T> == S.Input {
+    public func receive<S>(subscriber: S) where S : Subscriber, Never == S.Failure, RetrierEvent<Value> == S.Input {
         publisher.receive(subscriber: subscriber)
     }
 }
 
 public extension JobRetrier {
 
-    var value: T {
+    var value: Value {
         get async throws {
             try await publisher
                 .success()
@@ -46,10 +46,12 @@ private extension JobRetrier {
         }
     }
 
-    var trialPublisher: AnyPublisher<RetrierEvent<T>, Never> {
-        let subject = PassthroughSubject<(TrialData), Never>()
+    var trialPublisher: AnyPublisher<RetrierEvent<Value>, Never> {
+        let subject = CurrentValueSubject<TrialData, Never>(
+            TrialData(start: Date(), attemptIndex: 0, retryPolicy: policy, delay: 0)
+        )
         let result = subject
-            .asyncMapLatest { (data: TrialData) -> (Result<T, Error>, TrialData) in
+            .asyncMapLatest { (data: TrialData) -> (Result<Value, Error>, TrialData) in
                 try await Task.sleep(nanoseconds: UInt64(data.delay * 1_000_000_000))
                 do {
                     return try await (Result.success(job()), data)
@@ -62,7 +64,7 @@ private extension JobRetrier {
                     switch result {
                     case .failure(let error):
                         let failure = AttemptFailure(trialStart: data.start, index: data.attemptIndex, error: error)
-                        let event = RetrierEvent<T>.attemptFailure(failure)
+                        let event = RetrierEvent<Value>.attemptFailure(failure)
                         if let nextData = nextDataOnFailure(failure, data: data) {
                             subject.send(nextData)
                             return [event].publisher
@@ -76,18 +78,17 @@ private extension JobRetrier {
                 }
             }
             .switchToLatest()
-            .map { $0 as RetrierEvent<T>? }
+            .map { $0 as RetrierEvent<Value>? }
             .replaceError(with: nil)
             .compactMap { $0 }
             .eraseToAnyPublisher()
-        subject.send(.init(start: Date(), attemptIndex: 0, retryPolicy: policy, delay: 0))
         return result
     }
 
     func conditionalPublisher(
         conditionPublisher: AnyPublisher<Bool, Never>?,
-        trialPublisher: AnyPublisher<RetrierEvent<T>, Never>
-    ) -> AnyPublisher<RetrierEvent<T>, Never> {
+        trialPublisher: AnyPublisher<RetrierEvent<Value>, Never>
+    ) -> AnyPublisher<RetrierEvent<Value>, Never> {
         let conditionPublisher = conditionPublisher ?? Just(true).eraseToAnyPublisher()
         let conditionSubject = CurrentValueSubject<Bool, Never>(false)
         let subscription = conditionPublisher
@@ -107,14 +108,14 @@ private extension JobRetrier {
                         })
                         .eraseToAnyPublisher()
                 } else {
-                    Empty<RetrierEvent<T>, Never>().eraseToAnyPublisher()
+                    Empty<RetrierEvent<Value>, Never>().eraseToAnyPublisher()
                 }
             }
             .switchToLatest()
             .eraseToAnyPublisher()
     }
 
-    var publisher: AnyPublisher<RetrierEvent<T>, Never> {
+    var publisher: AnyPublisher<RetrierEvent<Value>, Never> {
         conditionalPublisher(conditionPublisher: conditionPublisher, trialPublisher: trialPublisher)
             .handleEvents(receiveOutput: { output in
                 MainActor.assumeIsolated {
