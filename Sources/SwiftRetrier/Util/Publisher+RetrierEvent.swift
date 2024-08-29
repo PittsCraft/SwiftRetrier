@@ -58,4 +58,8 @@ public extension Publisher where Output: RetrierEventProtocol, Failure == Never 
             }
             .eraseToAnyPublisher()
     }
+
+    func handleRetrierEvents(receiveEvent: @escaping @Sendable (Output) -> Void) -> Publishers.HandleEvents<Self> {
+        handleEvents(receiveOutput: receiveEvent)
+    }
 }

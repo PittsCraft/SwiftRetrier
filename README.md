@@ -2,13 +2,13 @@
 
 🪨 Rock-solid, concise and thorough library to retry and repeat `async throws` jobs.
 
-## A cold retrier with all options
+## A cold retrier with all options ❄️
 
 ```swift
 var conditionPublisher: AnyPublisher<Bool, Never>
 
 // Fully configurable policy with good defaults. Also available: withConstantDelay(), withNoDelay()
-let coldRetrier = withExponentialBackoff() 
+let retrier = withExponentialBackoff() 
     // Fetch only when you've got network and your user is authenticated for example
     .onlyWhen(conditionPublisher)
     // Ensure your retrier gives up on some conditions
@@ -22,33 +22,81 @@ let coldRetrier = withExponentialBackoff()
 [Exponential backoff](https://aws.amazon.com/fr/blogs/architecture/exponential-backoff-and-jitter/) with
 full jitter is the default and recommended algorithm to fetch from a backend. 
 
-## Execute and repeat
+## Job retrier and repeater ❄️
 
-You can chain a call to `execute { try await job() }`, but you can also reuse any cold retrier to execute multiple
-jobs independently.
+You can directly chain a call to `job { try await job() }` to create a cold job retrier,
+ but you can also reuse any retrier to create multiple job retriers.
 
-```swift  
-let fetcher = coldRetrier.execute { 
+```swift
+let fetcher = retrier.job { 
     try await fetchSomething() 
 }
 
-let poller = coldRetrier
+let poller = retrier
     // If you want to poll, well you can
     .repeating(withDelay: 30)
-    .execute { 
+    .job { 
         try await fetchSomethingElse() 
     }
- 
-// you can omit `execute` and call the retrier as a function:
-let otherFetcher = coldRetrier { try await fetchSomethingElse() }
-
-// You can always cancel hot retriers
-fetcher.cancel()
 ```
 
-## Await value in concurrency context
+Once the job is set, you can add event handlers to your (still cold ❄️) retrier.
 
-If you don't repeat, you can wait for a single value in a concurrency context
+```swift
+let fetcherWithEventHandler = fetcher.handleRetrierEvents {
+    switch $0 {
+        case .attemptSuccess(let value):
+            print("Fetched something: \(value)")
+        case .attemptFailure(let failure):
+            print("An attempt #\(failure.index) failed with \(failure.error)")
+        case .completion(let error):
+            print("Fetcher completed with \(error?.localizedDescription ?? "no error")")
+    }
+}.handleRetrierEvents {
+   // Do something fun 🤡
+}
+```
+
+## Collect 🔥
+
+All job retriers are cold publishers and:
+- **each subscription will create a new independent retrying stream**
+- **cancelling the subscription cancels the retrier**
+
+Once in the Combine world, you'll know what to do (else check next paragraph).
+
+```swift
+let cancellable = fetcher
+   .sink { event in
+        switch $0 {
+            case .attemptSuccess(let value):
+                print("Fetched something: \(value)")
+            case .attemptFailure(let failure):
+                print("An attempt #\(failure.index) failed with \(failure.error)")
+            case .completion(let error):
+                print("Poller completed with \(error?.localizedDescription ?? "no error")")
+        }
+   }
+
+let cancellable = fetcher
+    // Retrieve success values
+   .success()
+   .sink { fetchedValue in
+      // Do something with values
+   }
+```
+
+- `failure()` and `completion()` filters are also available
+- The publishers never fail, meaning their completion is always `.finished` and you can `sink {}` without handling 
+the completion
+- Instead, `attemptFailure`, `attemptSuccess` and `completion` events are materialized and sent as values.
+- You can use `success()`, `failure()` and `completion()` shortcuts.
+
+## Await value in concurrency context 🔥
+
+If you don't repeat, you can wait for a single value in a concurrency context and:
+- **each awaiting will create a new independent retrying stream**
+- **cancelling the task that is awaiting the value cancels the retrier**
 
 ```swift
 // This will throw if you cancel the retrier or if any `giveUp*()` function matches
@@ -59,58 +107,11 @@ let value = try await withExponentialBackoff()
     .giveUpOnErrors {
         $0 is MyFatalError
     }
-    .execute {
+    .job {
         try await api.fetchValue()
     }
     .value
 ```
-
-Note that you can use `cancellableValue` instead of `value`. In this case, if the task wrapping the concurrency context
-is cancelled, the underlying retrier will be cancelled.
-
-## Simple events handling
-
-Retrier events can be handled simply.
-
-```swift
-fetcher.onEach {
-    switch $0 {
-        case .attemptSuccess(let value):
-            print("Fetched something: \(value)")
-        case .attemptFailure(let failure):
-            print("An attempt #\(failure.index) failed with \(failure.error)")
-        case .completion(let error):
-            print("Fetcher completed with \(error?.localizedDescription ?? "no error")")
-    }
-}
-```
-
-Keep in mind that the event handler will be retained until the retrier finishes (succeeding, failing or being 
-cancelled).
-
-## Combine publishers
-
-All retriers (including repeaters) expose Combine publishers that publish relevant events.
-
-```swift
-let cancellable = poller.publisher()
-    .sink {
-        switch $0 {
-            case .attemptSuccess(let value):
-                print("Fetched something: \(value)")
-            case .attemptFailure(let failure):
-                print("An attempt #\(failure.index) failed with \(failure.error)")
-            case .completion(let error):
-                print("Poller completed with \(error?.localizedDescription ?? "no error")")
-        }
-    }
-```
-
-- The publishers never fail, meaning their completion is always `.finished` and you can `sink {}` without handling 
-the completion
-- Instead, `attemptFailure`, `attemptSuccess` and `completion` events are materialized and sent as values.
-- Retriers expose `successPublisher()`, `failurePublisher()` and `completionPublisher()` shortcuts.
-- You can use `publisher(propagateCancellation: true)` to cancel the retrier when you're done listening to it.
 
 ## Retriers contract
 
@@ -118,22 +119,15 @@ the completion
 - Retriers retry until either:
     - their policy gives up
     - the job succeeds (except for repeaters that will delay another trial)
-    - the retrier is cancelled
+    - the retrier is cancelled (via its subscription or its awaiting task cancellation)
     - their conditionPublisher ends after having published no value or `false` as its last value
 - When a policy gives up, the last job error is thrown on any `try await retrier.value`, and also embedded into 
 a `RetrierEvent.completion`.
-- Retriers publishers emit only on `DispatchQueue.main`.
-- When cancelled, the retrier publishers emit a `RetrierEvent.completion(CancellationError())` value then a `.finished`
-completion and no intermediary attempt result.
-- All retriers start their tasks immediately on initialization, and just wait for the current main queue cycle to end
- before executing jobs. This way, if a retrier is created on main queue and cancelled in the same cycle, it's guaranteed 
- to not execute the job even once.
-- You can create and cancel retriers on a different `DispatchQueue` or even in an asynchronous context. But in this 
-case, guarantees such as the previous one are no longer valid.
-- Condition publishers events will be processed on `DispatchQueue.main`, but won't be delayed if they're already 
-emitted on it.
+- Publishers emit only on `DispatchQueue.main`
+- Everything here is `MainActor` friendly
 - After a retrier is interrupted then resumed by its `conditionPublisher`, its policy is reused from start.
-Consequently `giveUpAfter(maxAttempts:)` and `giveUpAfter(timeout:)` checks are applied to the current trial, ignoring previous ones.
+Consequently `giveUpAfter(maxAttempts:)` and `giveUpAfter(timeout:)` checks are applied to the current trial,
+ignoring previous ones.
 
 ## Retry Policies
 
@@ -168,11 +162,6 @@ public func withMyOwnPolicy() -> Retrier {
     return Retrier(policy: policy, conditionPublisher: nil)
 }
 ```
-
-## Actual retrier classes
-
-You can use the classes initializers directly, namely `SimpleRetrier`, 
-`ConditionalRetrier` and `Repeater`.
 
 ## Contribute
 
