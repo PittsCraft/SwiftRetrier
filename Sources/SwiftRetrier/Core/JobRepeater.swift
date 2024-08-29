@@ -22,35 +22,37 @@ extension JobRepeater: Publisher {
 private extension JobRepeater {
 
     var publisher: AnyPublisher<RetrierEvent<Value>, Never> {
-        let singlePublisher = JobRetrier(policy: policy, conditionPublisher: conditionPublisher, job: job)
-        let repeatSubject = CurrentValueSubject<TimeInterval, Never>(0)
-        return repeatSubject
-            .map {
-                Just(())
-                    .delay(for: .seconds($0), scheduler: RunLoop.main)
-                    .flatMap {
-                        singlePublisher
-                            .compactMap { event in
-                                guard case .completion(let error) = event else {
-                                    return event
+        LazyPublisherBuilder {
+            let singlePublisher = JobRetrier(policy: policy, conditionPublisher: conditionPublisher, job: job)
+            let repeatSubject = CurrentValueSubject<TimeInterval, Never>(0)
+            return repeatSubject
+                .map {
+                    Just(())
+                        .delay(for: .seconds($0), scheduler: RunLoop.main)
+                        .flatMap {
+                            singlePublisher
+                                .compactMap { event in
+                                    guard case .completion(let error) = event else {
+                                        return event
+                                    }
+                                    if error == nil {
+                                        repeatSubject.send(repeatDelay)
+                                        return nil
+                                    } else {
+                                        repeatSubject.send(completion: .finished)
+                                        return event
+                                    }
                                 }
-                                if error == nil {
-                                    repeatSubject.send(repeatDelay)
-                                    return nil
-                                } else {
-                                    repeatSubject.send(completion: .finished)
-                                    return event
-                                }
-                            }
-                    }
-            }
-            .switchToLatest()
-            .handleEvents(receiveOutput: { output in
-                MainActor.assumeIsolated {
-                    receiveEvent(output)
+                        }
                 }
-            })
-            .eraseToAnyPublisher()
+                .switchToLatest()
+                .handleEvents(receiveOutput: { output in
+                    MainActor.assumeIsolated {
+                        receiveEvent(output)
+                    }
+                })
+        }
+        .eraseToAnyPublisher()
     }
 }
 

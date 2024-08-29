@@ -95,4 +95,88 @@ final class JobRetrierTest: XCTestCase {
         assertSameSequence(expectedSequence, sequence)
         cancellable.cancel()
     }
+
+    @MainActor
+    func test_When_retrierCancelled_Should_interruptJob() async throws {
+        let expectation = expectation(description: "Job was cancelled")
+        let subscription = JobRetrier(
+            policy: ConstantDelayRetryPolicy(delay: 0),
+            conditionPublisher: nil,
+            job: {
+                do {
+                    try await Task.sleep(nanoseconds: 1_000_000_000 * 10)
+                } catch {
+                    if error is CancellationError {
+                        expectation.fulfill()
+                    }
+                }
+            }
+        ).sink { _ in }
+        try await Task.sleep(nanoseconds: UInt64(1_000_000_000 * 0.5))
+        subscription.cancel()
+        await fulfillment(of: [expectation], timeout: defaultTimeout)
+    }
+
+    @MainActor
+    func test_When_conditionFalse_Should_notExecuteJob() async throws {
+        let subscription = JobRetrier(
+            policy: ConstantDelayRetryPolicy(delay: 0),
+            conditionPublisher: Empty(completeImmediately: false).prepend(false).eraseToAnyPublisher(),
+            job: {
+                XCTFail("Job should not be executed")
+            }
+        ).sink { _ in }
+        try await Task.sleep(nanoseconds: UInt64(1_000_000_000 * 0.5))
+        subscription.cancel()
+    }
+
+    func test_When_conditionCompletesAfterFalse_Should_completePublisher() {
+        let completed = CurrentValueSubject<Bool, Never>(false)
+        let subscription = JobRetrier(
+            policy: ConstantDelayRetryPolicy(delay: 0),
+            conditionPublisher: Just(false).eraseToAnyPublisher(),
+            job: {
+                XCTFail("Job should not be executed")
+            }
+        ).sink(receiveCompletion: { completion in
+            switch completion {
+            case .finished:
+                completed.value = true
+            case .failure:
+                XCTFail("Unexpected failure")
+            }
+        }, receiveValue: { event in
+            XCTFail("Unexpected event \(event)")
+        })
+        XCTAssertTrue(completed.value)
+        subscription.cancel()
+    }
+
+    @MainActor
+    func test_When_conditionCompletesAfterTrue_Should_receiveSuccessAndCompleteEventThenCompletes() async throws {
+        let expectation = expectation(description: "Publisher finished")
+        var sequence = [RetrierEvent<Bool>]()
+        let expectedSequence: [RetrierEvent<Bool>] = [
+            .attemptSuccess(true),
+            .completion(nil)
+        ]
+
+        let subscription = JobRetrier(
+            policy: ConstantDelayRetryPolicy(delay: 0),
+            conditionPublisher: Just(true).eraseToAnyPublisher(),
+            job: { true }
+        ).sink(receiveCompletion: { completion in
+            switch completion {
+            case .finished:
+                expectation.fulfill()
+            case .failure:
+                XCTFail("Unexpected failure")
+            }
+        }, receiveValue: {
+            sequence.append($0)
+        })
+        await fulfillment(of: [expectation], timeout: defaultTimeout)
+        assertSameSequence(expectedSequence, sequence)
+        subscription.cancel()
+    }
 }

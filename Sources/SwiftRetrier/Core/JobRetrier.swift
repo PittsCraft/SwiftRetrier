@@ -91,7 +91,12 @@ private extension JobRetrier {
     ) -> AnyPublisher<RetrierEvent<Value>, Never> {
         let conditionPublisher = Just(true).combineWith(condition: conditionPublisher).eraseToAnyPublisher()
         let conditionSubject = CurrentValueSubject<Bool, Never>(false)
-        let subscription = conditionPublisher
+        let conditionSubscription = conditionPublisher
+            .handleEvents(receiveCompletion: { completion in
+                if !conditionSubject.value {
+                    conditionSubject.send(completion: completion)
+                }
+            })
             .sink {
                 conditionSubject.value = $0
             }
@@ -100,10 +105,10 @@ private extension JobRetrier {
                 if condition {
                     trialPublisher
                         .handleEvents(receiveCompletion: { _ in
-                            subscription.cancel()
+                            conditionSubscription.cancel()
                             conditionSubject.send(completion: .finished)
                         }, receiveCancel: {
-                            subscription.cancel()
+                            conditionSubscription.cancel()
                             conditionSubject.send(completion: .finished)
                         })
                         .eraseToAnyPublisher()
@@ -116,13 +121,14 @@ private extension JobRetrier {
     }
 
     var publisher: AnyPublisher<RetrierEvent<Value>, Never> {
-        conditionalPublisher(conditionPublisher: conditionPublisher, trialPublisher: trialPublisher)
-            .handleEvents(receiveOutput: { output in
-                MainActor.assumeIsolated {
-                    receiveEvent(output)
-                }
-            })
-            .eraseToAnyPublisher()
+        LazyPublisherBuilder {
+            conditionalPublisher(conditionPublisher: conditionPublisher, trialPublisher: trialPublisher)
+                .handleEvents(receiveOutput: { output in
+                    MainActor.assumeIsolated {
+                        receiveEvent(output)
+                    }
+                })
+        }.eraseToAnyPublisher()
     }
 }
 
