@@ -63,7 +63,7 @@ private extension JobRetrier {
         let subject = CurrentValueSubject<TrialData, Never>(
             TrialData(start: Date(), attemptIndex: 0, retryPolicy: policy, delay: 0)
         )
-        let result = subject
+        return subject
             .asyncMapLatest { (data: TrialData) -> (Result<Value, Error>, TrialData) in
                 try await Task.sleep(nanoseconds: UInt64(data.delay * 1_000_000_000))
                 do {
@@ -95,7 +95,6 @@ private extension JobRetrier {
             .replaceError(with: nil)
             .compactMap { $0 }
             .eraseToAnyPublisher()
-        return result
     }
 
     func conditionalPublisher(
