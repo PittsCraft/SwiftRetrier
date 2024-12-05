@@ -6,7 +6,7 @@ public enum AsyncError: Error {
     case finishedWithoutValue
 }
 
-public extension Publisher where Self: Sendable, Output: Sendable {
+extension Publisher where Self: Sendable, Output: Sendable {
 
     var cancellableFirst: Output {
         get async throws {

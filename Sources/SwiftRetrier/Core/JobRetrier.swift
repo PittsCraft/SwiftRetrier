@@ -112,23 +112,37 @@ private extension JobRetrier {
             .sink {
                 conditionSubject.value = $0
             }
+        var succeeded = false
+        func complete() {
+            if succeeded {
+                conditionSubscription.cancel()
+                conditionSubject.send(completion: .finished)
+            }
+        }
         return conditionSubject
+            .removeDuplicates()
             .map { condition in
                 if condition {
-                    trialPublisher
-                        .handleEvents(receiveCompletion: { _ in
-                            conditionSubscription.cancel()
-                            conditionSubject.send(completion: .finished)
-                        }, receiveCancel: {
-                            conditionSubscription.cancel()
-                            conditionSubject.send(completion: .finished)
-                        })
+                    return trialPublisher
+                        .handleEvents(
+                            receiveOutput: { event in
+                                if case .completion = event {
+                                    succeeded = true
+                                }
+                            },
+                            receiveCompletion: { _ in complete() },
+                            receiveCancel: { complete() }
+                        )
                         .eraseToAnyPublisher()
                 } else {
-                    Empty<RetrierEvent<Value>, Never>().eraseToAnyPublisher()
+                    return Empty<RetrierEvent<Value>, Never>().eraseToAnyPublisher()
                 }
             }
             .switchToLatest()
+            .handleEvents(receiveCancel: {
+                conditionSubscription.cancel()
+                conditionSubject.send(completion: .finished)
+            })
             .eraseToAnyPublisher()
     }
 

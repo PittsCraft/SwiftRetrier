@@ -161,4 +161,28 @@ final class JobRetrierTest: XCTestCase {
         assertSameSequence(expectedSequence, sequence)
         subscription.cancel()
     }
+
+    @MainActor
+    func test_When_conditionChanges_Should_notInduceGiveUp() async throws {
+        let subject = CurrentValueSubject<Void?, Never>(nil)
+        let conditionPublisher = [
+            Just(true).eraseToAnyPublisher(),
+            Just(false)
+                .delay(for: 0.1, scheduler: RunLoop.main)
+            // Providing a value to publish just before we switch back to positive condition
+                .handleEvents(receiveOutput: { _ in subject.value = () })
+                .eraseToAnyPublisher(),
+            Just(true).delay(for: 0.1, scheduler: RunLoop.main).eraseToAnyPublisher()
+        ]
+            .publisher
+            .flatMap { $0 }
+            .eraseToAnyPublisher()
+        try await JobRetrier(
+            policy: ConstantDelayRetryPolicy(delay: 0),
+            conditionPublisher: conditionPublisher,
+            job: {
+                try await subject.compactMap { $0 }.cancellableFirst
+            }
+        ).value
+    }
 }
