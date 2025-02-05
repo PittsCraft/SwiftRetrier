@@ -13,7 +13,7 @@ struct RepeatingTrialPublisher<Value: Sendable>: Sendable {
 extension RepeatingTrialPublisher: Publisher {
     typealias Output = RetrierEvent<Value>
 
-    func receive<S>(subscriber: S) where S : Subscriber, Failure == S.Failure, RetrierEvent<Value> == S.Input {
+    func receive<S>(subscriber: S) where S: Subscriber, Failure == S.Failure, RetrierEvent<Value> == S.Input {
         let subscription = RepeatingTrialSubscription(
             job: job,
             policy: policy,

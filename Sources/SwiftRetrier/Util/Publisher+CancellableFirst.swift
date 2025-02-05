@@ -46,7 +46,7 @@ extension Publisher where Self: Sendable, Output: Sendable {
 }
 
 @MainActor
-private final class CancellableExecutor<Output>: Sendable {
+private final class CancellableExecutor<Output> {
 
     private var finished: Bool = false
     private var subscription: AnyCancellable?

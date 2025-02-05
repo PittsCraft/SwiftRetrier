@@ -11,7 +11,7 @@ struct TrialPublisher<Value: Sendable>: Sendable {
 extension TrialPublisher: Publisher {
     typealias Output = RetrierEvent<Value>
 
-    func receive<S>(subscriber: S) where S : Subscriber, Failure == S.Failure, RetrierEvent<Value> == S.Input {
+    func receive<S>(subscriber: S) where S: Subscriber, Failure == S.Failure, RetrierEvent<Value> == S.Input {
         let subscription = TrialSubscription(job: job, policy: policy, subscriber: subscriber)
         subscriber.receive(subscription: subscription)
     }
@@ -23,18 +23,26 @@ where Never == S.Failure, RetrierEvent<Value> == S.Input {
     typealias Output = RetrierEvent<Value>
     typealias Failure = Never
 
-    let job: Job<Value>
-    private var policy: RetryPolicy
+    private let job: Job<Value>
+    private var policy: RetryPolicy // Will change after each failure
     private let subscriber: S
 
     private var demand: Subscribers.Demand = .none
+    /// Trial start date, will be set on first demand
     private var startDate: Date?
+    /// Retain next action to be performed when demand allows it
     private var retryDecision: RetryDecision = .retry(delay: 0)
+    /// Retain last attempt failure to provide it in completion event  in case the policy gives up
     private var attemptFailure: AttemptFailure?
+    /// Retain last failure date to compute remaining retry delay to apply when demand allows it
     private var lastFailureDate: Date?
+    /// Retain if the retrier succeeded to send proper completion to the subscriber when demand allows it
     private var succeeded: Bool = false
+    /// Termination flag
     private var terminated: Bool = false
+    /// Current delay and attempt task
     private var task: Task<Void, Never>?
+    /// Reentrant lock, especially allows subscriber to cancel the subscription on any event sent from a locked block
     private let lock = NSRecursiveLock()
 
     var combineIdentifier: CombineIdentifier = .init()
@@ -101,15 +109,19 @@ where Never == S.Failure, RetrierEvent<Value> == S.Input {
         handle(demand: demand)
     }
 
+    private func getStartDate() -> Date {
+        if let startDate {
+            return startDate
+        } else {
+            let startDate = Date()
+            self.startDate = startDate
+            return startDate
+        }
+    }
+
     @MainActor
     private func attempt(delay: TimeInterval) async {
-        let startDate: Date
-        if let storedDate = self.startDate {
-            startDate = storedDate
-        } else {
-            startDate = Date()
-            self.startDate = startDate
-        }
+        let startDate = getStartDate()
         if delay > 0 {
             do {
                 try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
