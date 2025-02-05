@@ -2,9 +2,16 @@ import Foundation
 @preconcurrency import Combine
 
 public struct Repeater: Sendable {
-    let policy: RetryPolicy
-    let repeatDelay: TimeInterval
-    let conditionPublisher: AnyPublisher<Bool, Never>?
+    private let policy: RetryPolicy
+    private let repeatDelay: TimeInterval
+    private let conditionPublisher: AnyPublisher<Bool, Never>?
+
+    public init<P>(policy: RetryPolicy, repeatDelay: TimeInterval, conditionPublisher: P? = nil)
+    where P: Publisher, P.Output == Bool, P.Failure == Never {
+        self.policy = policy
+        self.repeatDelay = repeatDelay
+        self.conditionPublisher = conditionPublisher?.eraseToAnyPublisher()
+    }
 }
 
 extension Repeater: RetrierBuilder {

@@ -6,9 +6,28 @@ public struct JobRetrier<Value: Sendable>: @unchecked Sendable {
     public typealias Output = RetrierEvent<Value>
 
     let policy: RetryPolicy
-    let conditionPublisher: AnyPublisher<Bool, Never>?
-    var receiveEvent: @Sendable @MainActor (RetrierEvent<Value>) -> Void = { _ in }
     let job: Job<Value>
+    let conditionPublisher: AnyPublisher<Bool, Never>?
+    let receiveEvent: @Sendable @MainActor (RetrierEvent<Value>) -> Void
+
+    private let publisher: ConditionalRetrierPublisher<Value>
+
+    init(
+        policy: RetryPolicy,
+        conditionPublisher: AnyPublisher<Bool, Never>?,
+        receiveEvent: @escaping @Sendable @MainActor (RetrierEvent<Value>) -> Void = { _ in },
+        job: @escaping Job<Value>
+    ) {
+        self.policy = policy
+        self.conditionPublisher = conditionPublisher
+        self.receiveEvent = receiveEvent
+        self.job = job
+        self.publisher = ConditionalRetrierPublisher(
+            policy: policy,
+            job: job,
+            conditionPublisher: conditionPublisher ?? Just(true).eraseToAnyPublisher()
+        )
+    }
 }
 
 extension JobRetrier: Publisher {
@@ -40,127 +59,4 @@ public extension JobRetrier {
                 .cancellableFirst
         }
     }
-}
-
-private extension JobRetrier {
-
-    @MainActor
-    func nextDataOnFailure(_ failure: AttemptFailure, data: TrialData) -> TrialData? {
-        switch data.retryPolicy.shouldRetry(on: failure) {
-        case .giveUp:
-            nil
-        case .retry(let delay):
-                .init(
-                    start: data.start,
-                    attemptIndex: data.attemptIndex + 1,
-                    retryPolicy: data.retryPolicy.policyAfter(attemptFailure: failure, delay: delay),
-                    delay: delay
-                )
-        }
-    }
-
-    var trialPublisher: AnyPublisher<RetrierEvent<Value>, Never> {
-        let subject = CurrentValueSubject<TrialData, Never>(
-            TrialData(start: Date(), attemptIndex: 0, retryPolicy: policy, delay: 0)
-        )
-        return subject
-            .asyncMapLatest { (data: TrialData) -> (Result<Value, Error>, TrialData) in
-                try await Task.sleep(nanoseconds: UInt64(data.delay * 1_000_000_000))
-                do {
-                    return try await (Result.success(job()), data)
-                } catch {
-                    return (Result.failure(error), data)
-                }
-            }
-            .map { [subject] result, data in
-                MainActor.assumeIsolated {
-                    switch result {
-                    case .failure(let error):
-                        let failure = AttemptFailure(trialStart: data.start, index: data.attemptIndex, error: error)
-                        let event = RetrierEvent<Value>.attemptFailure(failure)
-                        if let nextData = nextDataOnFailure(failure, data: data) {
-                            subject.send(nextData)
-                            return [event].publisher
-                        }
-                        subject.send(completion: .finished)
-                        return [event, .completion(failure.error)].publisher
-                    case .success(let output):
-                        subject.send(completion: .finished)
-                        return [.attemptSuccess(output), .completion(nil)].publisher
-                    }
-                }
-            }
-            .switchToLatest()
-            .map { $0 as RetrierEvent<Value>? }
-            .replaceError(with: nil)
-            .compactMap { $0 }
-            .eraseToAnyPublisher()
-    }
-
-    func conditionalPublisher(
-        conditionPublisher: AnyPublisher<Bool, Never>?,
-        trialPublisher: AnyPublisher<RetrierEvent<Value>, Never>
-    ) -> AnyPublisher<RetrierEvent<Value>, Never> {
-        let conditionPublisher = Just(true).combineWith(condition: conditionPublisher).eraseToAnyPublisher()
-        let conditionSubject = CurrentValueSubject<Bool, Never>(false)
-        let conditionSubscription = conditionPublisher
-            .handleEvents(receiveCompletion: { completion in
-                if !conditionSubject.value {
-                    conditionSubject.send(completion: completion)
-                }
-            })
-            .sink {
-                conditionSubject.value = $0
-            }
-        var succeeded = false
-        func complete() {
-            if succeeded {
-                conditionSubscription.cancel()
-                conditionSubject.send(completion: .finished)
-            }
-        }
-        return conditionSubject
-            .removeDuplicates()
-            .map { condition in
-                if condition {
-                    return trialPublisher
-                        .handleEvents(
-                            receiveOutput: { event in
-                                if case .completion = event {
-                                    succeeded = true
-                                }
-                            },
-                            receiveCompletion: { _ in complete() },
-                            receiveCancel: { complete() }
-                        )
-                        .eraseToAnyPublisher()
-                } else {
-                    return Empty<RetrierEvent<Value>, Never>().eraseToAnyPublisher()
-                }
-            }
-            .switchToLatest()
-            .handleEvents(receiveCancel: {
-                conditionSubscription.cancel()
-                conditionSubject.send(completion: .finished)
-            })
-            .eraseToAnyPublisher()
-    }
-
-    var publisher: AnyPublisher<RetrierEvent<Value>, Never> {
-        LazyPublisherBuilder {
-            conditionalPublisher(conditionPublisher: conditionPublisher, trialPublisher: trialPublisher)
-                .handleEvents(receiveOutput: { output in
-                    MainActor.assumeIsolated {
-                        receiveEvent(output)
-                    }
-                })
-        }.eraseToAnyPublisher()
-    }
-}
-
-private struct TrialData: Sendable {
-    let start: Date
-    let attemptIndex: UInt
-    let retryPolicy: RetryPolicy
-    let delay: TimeInterval
 }

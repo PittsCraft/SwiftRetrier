@@ -185,4 +185,35 @@ final class JobRetrierTest: XCTestCase {
             }
         ).value
     }
+
+    @MainActor
+    func test_When_conditionTrueAndAttemptFails_Should_notInduceGiveUp() async throws {
+        let conditionPublisher = Just(true)
+            .eraseToAnyPublisher()
+        var count = 0
+        let expectation = expectation(description: "Received multiple attempts")
+        let cancellable = JobRetrier(
+            policy: ConstantDelayRetryPolicy(delay: 0.2),
+            conditionPublisher: conditionPublisher,
+            job: {
+                throw TestError()
+            }
+        )
+        .sink {
+            switch $0 {
+            case .attemptFailure:
+                count += 1
+                if count >= 5 {
+                    expectation.fulfill()
+                }
+            case .completion:
+                assertionFailure("Should not get a completion")
+            default:
+                break
+            }
+        }
+        await fulfillment(of: [expectation], timeout: defaultTimeout)
+        cancellable.cancel()
+    }
+
 }

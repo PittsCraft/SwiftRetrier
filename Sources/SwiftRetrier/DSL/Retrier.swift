@@ -2,8 +2,13 @@ import Foundation
 import Combine
 
 public struct Retrier: @unchecked Sendable {
-    let policy: RetryPolicy
-    let conditionPublisher: AnyPublisher<Bool, Never>?
+    private let policy: RetryPolicy
+    private let conditionPublisher: AnyPublisher<Bool, Never>?
+
+    public init(policy: RetryPolicy, conditionPublisher: AnyPublisher<Bool, Never>?) {
+        self.policy = policy
+        self.conditionPublisher = conditionPublisher?.eraseToAnyPublisher()
+    }
 }
 
 extension Retrier: RetrierBuilder {
