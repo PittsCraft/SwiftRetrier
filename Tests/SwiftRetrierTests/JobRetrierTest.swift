@@ -4,7 +4,7 @@ import XCTest
 
 final class JobRetrierTest: XCTestCase {
 
-    func test_When_jobSuceeds_Should_completeProperly() {
+    func test_When_jobSucceeds_Should_completeProperly() {
         let expectedSequence: [RetrierEvent<Bool>] = [
             .attemptSuccess(true),
             .completion(nil)
@@ -213,6 +213,35 @@ final class JobRetrierTest: XCTestCase {
             }
         }
         await fulfillment(of: [expectation], timeout: defaultTimeout)
+        cancellable.cancel()
+    }
+
+    @MainActor
+    func test_When_handleRetrierEventsIsUsed_Should_forwardEvents() async {
+        let conditionPublisher = Just(true)
+            .eraseToAnyPublisher()
+        let failureExpectation = expectation(description: "Received attempt failure")
+        let completionExpectation = expectation(description: "Received completion")
+        let retrier = JobRetrier(
+            policy: ConstantDelayRetryPolicy(delay: 0.2),
+            conditionPublisher: conditionPublisher,
+            job: {
+                throw TestError()
+            }
+        )
+            .giveUp(on: { _, _ in true })
+            .handleRetrierEvents { event in
+                switch event {
+                case .attemptSuccess:
+                    break
+                case .attemptFailure:
+                    failureExpectation.fulfill()
+                case .completion:
+                    completionExpectation.fulfill()
+                }
+            }
+        let cancellable = retrier.sink(receiveValue: { _ in })
+        await fulfillment(of: [failureExpectation, completionExpectation], timeout: defaultTimeout)
         cancellable.cancel()
     }
 

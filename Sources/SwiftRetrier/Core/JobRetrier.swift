@@ -10,7 +10,7 @@ public struct JobRetrier<Value: Sendable>: @unchecked Sendable {
     let conditionPublisher: AnyPublisher<Bool, Never>?
     let receiveEvent: @Sendable @MainActor (RetrierEvent<Value>) -> Void
 
-    private let publisher: ConditionalRetrierPublisher<Value>
+    private let publisher: ConditionalTrialPublisher<Value>
 
     init(
         policy: RetryPolicy,
@@ -22,7 +22,7 @@ public struct JobRetrier<Value: Sendable>: @unchecked Sendable {
         self.conditionPublisher = conditionPublisher
         self.receiveEvent = receiveEvent
         self.job = job
-        self.publisher = ConditionalRetrierPublisher(
+        self.publisher = ConditionalTrialPublisher(
             policy: policy,
             job: job,
             conditionPublisher: conditionPublisher ?? Just(true).eraseToAnyPublisher()
@@ -33,7 +33,13 @@ public struct JobRetrier<Value: Sendable>: @unchecked Sendable {
 extension JobRetrier: Publisher {
 
     public func receive<S>(subscriber: S) where S: Subscriber, Never == S.Failure, RetrierEvent<Value> == S.Input {
-        publisher.receive(subscriber: subscriber)
+        publisher
+            .handleEvents(receiveOutput: { output in
+                MainActor.assumeIsolated {
+                    receiveEvent(output)
+                }
+            })
+            .receive(subscriber: subscriber)
     }
 }
 

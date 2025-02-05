@@ -1,7 +1,7 @@
 import Foundation
 @preconcurrency import Combine
 
-struct ConditionalRetrierPublisher<Value: Sendable>: Sendable {
+struct ConditionalTrialPublisher<Value: Sendable>: Sendable {
     typealias Failure = Never
 
     let policy: RetryPolicy
@@ -9,7 +9,7 @@ struct ConditionalRetrierPublisher<Value: Sendable>: Sendable {
     let conditionPublisher: AnyPublisher<Bool, Never>
 }
 
-extension ConditionalRetrierPublisher: Publisher {
+extension ConditionalTrialPublisher: Publisher {
     typealias Output = RetrierEvent<Value>
 
     func receive<S>(subscriber: S) where S : Subscriber, Failure == S.Failure, RetrierEvent<Value> == S.Input {
