@@ -8,62 +8,41 @@ public struct JobRepeater<Value: Sendable>: Sendable {
     let policy: RetryPolicy
     let repeatDelay: TimeInterval
     let conditionPublisher: AnyPublisher<Bool, Never>?
-    var receiveEvent: @Sendable @MainActor (RetrierEvent<Value>) -> Void = { _ in }
+    let receiveEvent: @Sendable @MainActor (RetrierEvent<Value>) -> Void
     let job: Job<Value>
+
+    private let publisher: RepeatingTrialPublisher<Value>
+
+    init(
+        policy: RetryPolicy,
+        repeatDelay: TimeInterval,
+        conditionPublisher: AnyPublisher<Bool, Never>?,
+        receiveEvent: @escaping @Sendable @MainActor (RetrierEvent<Value>) -> Void = { _ in },
+        job: @escaping Job<Value>
+    ) {
+        self.policy = policy
+        self.repeatDelay = repeatDelay
+        self.conditionPublisher = conditionPublisher
+        self.receiveEvent = receiveEvent
+        self.job = job
+        self.publisher = RepeatingTrialPublisher<Value>(
+            policy: policy,
+            repeatDelay: repeatDelay,
+            job: job,
+            conditionPublisher: conditionPublisher ?? Just(true).eraseToAnyPublisher()
+        )
+    }
 }
 
 extension JobRepeater: Publisher {
 
     public func receive<S>(subscriber: S) where S: Subscriber, Failure == S.Failure, Output == S.Input {
-        publisher.receive(subscriber: subscriber)
-    }
-}
-
-private extension JobRepeater {
-
-    var publisher: AnyPublisher<RetrierEvent<Value>, Never> {
-        LazyPublisherBuilder {
-            let singlePublisher = JobRetrier(policy: policy, conditionPublisher: conditionPublisher, job: job)
-            let repeatSubject = CurrentValueSubject<TimeInterval, Never>(0)
-            let conditionPublisher = Just(true).combineWith(condition: conditionPublisher).eraseToAnyPublisher()
-            let conditionSubject = CurrentValueSubject<Bool, Never>(false)
-            let conditionSubscription = conditionPublisher
-                .handleEvents(receiveCompletion: { _ in
-                    if !conditionSubject.value {
-                        repeatSubject.send(completion: .finished)
-                    }
-                })
-                .sink {
-                    conditionSubject.value = $0
+        publisher
+            .handleEvents(receiveOutput: { output in
+                MainActor.assumeIsolated {
+                    receiveEvent(output)
                 }
-            return repeatSubject
-                .map {
-                    Just(())
-                        .delay(for: .seconds($0), scheduler: RunLoop.main)
-                        .flatMap {
-                            singlePublisher
-                                .compactMap { event in
-                                    guard case .completion(let error) = event else {
-                                        return event
-                                    }
-                                    if error == nil {
-                                        repeatSubject.send(repeatDelay)
-                                        return nil
-                                    } else {
-                                        conditionSubscription.cancel()
-                                        repeatSubject.send(completion: .finished)
-                                        return event
-                                    }
-                                }
-                        }
-                }
-                .switchToLatest()
-                .handleEvents(receiveOutput: { output in
-                    MainActor.assumeIsolated {
-                        receiveEvent(output)
-                    }
-                })
-        }
-        .eraseToAnyPublisher()
+            })
+            .receive(subscriber: subscriber)
     }
 }

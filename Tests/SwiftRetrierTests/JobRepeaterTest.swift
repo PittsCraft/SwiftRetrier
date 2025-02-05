@@ -165,4 +165,34 @@ final class JobRepeaterTest: XCTestCase {
         await fulfillment(of: [expectation], timeout: 1000)
         subscription.cancel()
     }
+
+    @MainActor
+    func test_When_handleRetrierEventsIsUsed_Should_forwardEvents() async {
+        let conditionPublisher = Just(true)
+            .eraseToAnyPublisher()
+        let failureExpectation = expectation(description: "Received attempt failure")
+        let completionExpectation = expectation(description: "Received completion")
+        let retrier = JobRepeater(
+            policy: ConstantDelayRetryPolicy(delay: 0.2),
+            repeatDelay: 0,
+            conditionPublisher: conditionPublisher,
+            job: {
+                throw TestError()
+            }
+        )
+            .giveUp(on: { _, _ in true })
+            .handleRetrierEvents { event in
+                switch event {
+                case .attemptSuccess:
+                    break
+                case .attemptFailure:
+                    failureExpectation.fulfill()
+                case .completion:
+                    completionExpectation.fulfill()
+                }
+            }
+        let cancellable = retrier.sink(receiveValue: { _ in })
+        await fulfillment(of: [failureExpectation, completionExpectation], timeout: defaultTimeout)
+        cancellable.cancel()
+    }
 }

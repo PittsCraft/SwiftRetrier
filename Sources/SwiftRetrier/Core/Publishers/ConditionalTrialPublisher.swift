@@ -37,7 +37,6 @@ where Never == S.Failure, RetrierEvent<Value> == S.Input {
     private var demand: Subscribers.Demand = .none
     private var condition: Bool?
     private var terminated: Bool = false
-    private var task: Task<Void, Never>?
     private let lock = NSRecursiveLock()
 
     var combineIdentifier: CombineIdentifier = .init()
