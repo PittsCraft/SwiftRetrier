@@ -145,7 +145,7 @@ final class JobRetrierTest: XCTestCase {
 
         let subscription = JobRetrier(
             policy: ConstantDelayRetryPolicy(delay: 0),
-            conditionPublisher: Just(true).eraseToAnyPublisher(),
+            conditionPublisher: nil,
             job: { true }
         ).sink(receiveCompletion: { completion in
             switch completion {
@@ -188,13 +188,11 @@ final class JobRetrierTest: XCTestCase {
 
     @MainActor
     func test_When_conditionTrueAndAttemptFails_Should_notInduceGiveUp() async throws {
-        let conditionPublisher = Just(true)
-            .eraseToAnyPublisher()
         var count = 0
         let expectation = expectation(description: "Received multiple attempts")
         let cancellable = JobRetrier(
             policy: ConstantDelayRetryPolicy(delay: 0.2),
-            conditionPublisher: conditionPublisher,
+            conditionPublisher: nil,
             job: {
                 throw TestError()
             }
@@ -218,13 +216,11 @@ final class JobRetrierTest: XCTestCase {
 
     @MainActor
     func test_When_handleRetrierEventsIsUsed_Should_forwardEvents() async {
-        let conditionPublisher = Just(true)
-            .eraseToAnyPublisher()
         let failureExpectation = expectation(description: "Received attempt failure")
         let completionExpectation = expectation(description: "Received completion")
         let retrier = JobRetrier(
             policy: ConstantDelayRetryPolicy(delay: 0.2),
-            conditionPublisher: conditionPublisher,
+            conditionPublisher: nil,
             job: {
                 throw TestError()
             }
@@ -245,4 +241,32 @@ final class JobRetrierTest: XCTestCase {
         cancellable.cancel()
     }
 
+    @MainActor
+    func test_When_failsRepeatedly_Should_increaseAttemptIndex() async {
+        let expectedIndex = CurrentValueSubject<UInt, Never>(0)
+        let expectation = self.expectation(description: "Reached 10 failures")
+
+        let cancellable = JobRetrier(
+            policy: ConstantDelayRetryPolicy(delay: 0),
+            conditionPublisher: nil,
+            job: {
+                throw TestError()
+            }
+        ).handleRetrierEvents(receiveEvent: { [expectedIndex] event in
+            switch event {
+            case .attemptSuccess:
+                XCTFail("Unexpected success")
+            case .attemptFailure(let attemptFailure):
+                XCTAssertEqual(attemptFailure.index, expectedIndex.value)
+                expectedIndex.value += 1
+                if expectedIndex.value == 10 {
+                    expectation.fulfill()
+                }
+            case .completion:
+                XCTFail("Unexpected completion")
+            }
+        }).sink { _ in }
+        await fulfillment(of: [expectation], timeout: defaultTimeout)
+        cancellable.cancel()
+    }
 }

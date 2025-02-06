@@ -17,7 +17,7 @@ extension TrialPublisher: Publisher {
     }
 }
 
-@preconcurrency private class TrialSubscription<Value: Sendable, S: Subscriber>: Subscription
+@preconcurrency private class TrialSubscription<Value: Sendable, S: Subscriber>
 where Never == S.Failure, RetrierEvent<Value> == S.Input {
 
     typealias Output = RetrierEvent<Value>
@@ -52,6 +52,9 @@ where Never == S.Failure, RetrierEvent<Value> == S.Input {
         self.policy = policy
         self.subscriber = subscriber
     }
+}
+
+extension TrialSubscription: Subscription {
 
     func request(_ demand: Subscribers.Demand) {
         handle(demand: demand)
@@ -63,53 +66,62 @@ where Never == S.Failure, RetrierEvent<Value> == S.Input {
             task?.cancel()
         }
     }
+}
 
-    private func handle(demand: Subscribers.Demand) {
+private extension TrialSubscription {
+
+    /// Trigger next trial step when relevant: demand > 0, no step currently executing, not terminated
+    func handle(demand: Subscribers.Demand) {
         lock.withLock {
             guard !terminated else { return }
             self.demand += demand
             let shouldContinue = self.demand.max ?? .max > 0 && task == nil
             if shouldContinue {
                 task = Task {
-                    await continueTrial()
+                    await nextTrialStep()
                 }
             }
         }
     }
 
+    /// Continue trial. Should be called only when demand > 0 and exclusively.
+    ///
+    /// Steps can either be: success handling, failure (give up) handling, or new attempt execution.
     @MainActor
-    private func continueTrial() async {
-        guard !succeeded else {
-            lock.withLock {
-                guard !terminated else { return }
-                _ = subscriber.receive(.completion(nil))
-                subscriber.receive(completion: .finished)
-                terminated = true
+    func nextTrialStep() async {
+        lock.withLock {
+            guard !succeeded else {
+                successStep()
+                return
             }
-            return
         }
         switch retryDecision {
         case .giveUp:
             lock.withLock {
-                guard !terminated else { return }
-                _ = subscriber.receive(.completion(attemptFailure?.error))
-                subscriber.receive(completion: .finished)
-                terminated = true
+                failureStep()
             }
         case .retry(let delay):
             let lastFailureDate = lastFailureDate ?? Date()
             let remainingDelay = lastFailureDate.timeIntervalSince1970 + delay - Date().timeIntervalSince1970
-            await attempt(delay: remainingDelay)
+            await attemptStep(delay: remainingDelay)
         }
     }
 
-    private func onAttemptFinished(with demand: Subscribers.Demand) {
-        self.demand -= 1
-        task = nil
-        handle(demand: demand)
+    func successStep() {
+        guard !terminated else { return }
+        _ = subscriber.receive(.completion(nil))
+        subscriber.receive(completion: .finished)
+        terminated = true
     }
 
-    private func getStartDate() -> Date {
+    func failureStep() {
+        guard !terminated else { return }
+        _ = subscriber.receive(.completion(attemptFailure?.error))
+        subscriber.receive(completion: .finished)
+        terminated = true
+    }
+
+    func getOrCreateStartDate() -> Date {
         if let startDate {
             return startDate
         } else {
@@ -120,8 +132,10 @@ where Never == S.Failure, RetrierEvent<Value> == S.Input {
     }
 
     @MainActor
-    private func attempt(delay: TimeInterval) async {
-        let startDate = getStartDate()
+    func attemptStep(delay: TimeInterval) async {
+        // Create start date on first attempt, retrieve it for next ones
+        let startDate = getOrCreateStartDate()
+        // Wait if requested
         if delay > 0 {
             do {
                 try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
@@ -129,32 +143,49 @@ where Never == S.Failure, RetrierEvent<Value> == S.Input {
                return // Task was cancelled
             }
         }
+        // After a failure: update policy for next attempt
         if let attemptFailure {
             policy = policy.policyAfter(attemptFailure: attemptFailure, delay: delay)
         }
+        // Attempt
         do {
             let value = try await job()
             lock.withLock {
-                guard !terminated else { return }
-                succeeded = true
-                let demand = subscriber.receive(.attemptSuccess(value))
-                onAttemptFinished(with: demand)
+                onAttemptSuccess(value: value)
             }
         } catch {
             lock.withLock {
-                guard !terminated else { return }
-                self.lastFailureDate = Date()
-                let index: UInt = if let attemptFailure {
-                    attemptFailure.index + 1
-                } else {
-                    0
-                }
-                let attemptFailure = AttemptFailure(trialStart: startDate, index: index, error: error)
-                self.attemptFailure = attemptFailure
-                self.retryDecision = policy.shouldRetry(on: attemptFailure)
-                let demand = subscriber.receive(.attemptFailure(attemptFailure))
-                onAttemptFinished(with: demand)
+                onAttemptFailure(startDate: startDate, error: error)
             }
         }
+    }
+
+    func onAttemptSuccess(value: Value) {
+        guard !terminated else { return }
+        succeeded = true
+        let demand = subscriber.receive(.attemptSuccess(value))
+        onAttemptFinished(with: demand)
+    }
+
+    @MainActor
+    func onAttemptFailure(startDate: Date, error: Error) {
+        guard !terminated else { return }
+        self.lastFailureDate = Date()
+        let index: UInt = if let attemptFailure {
+            attemptFailure.index + 1
+        } else {
+            0
+        }
+        let attemptFailure = AttemptFailure(trialStart: startDate, index: index, error: error)
+        self.attemptFailure = attemptFailure
+        self.retryDecision = policy.shouldRetry(on: attemptFailure)
+        let demand = subscriber.receive(.attemptFailure(attemptFailure))
+        onAttemptFinished(with: demand)
+    }
+
+    func onAttemptFinished(with demand: Subscribers.Demand) {
+        self.demand -= 1
+        task = nil
+        handle(demand: demand)
     }
 }
