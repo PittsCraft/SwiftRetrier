@@ -88,7 +88,6 @@ private extension ConditionalRetrierSubscription {
     func handle(demand: Subscribers.Demand) {
         self.demand += demand
         trialSubscription?.request(demand) // Relay extra demand to active subscription
-        handleTrialConditionsChange()
     }
 
     func handleTrialConditionsChange() {
@@ -141,8 +140,8 @@ extension ConditionalRetrierSubscription: Subscriber {
     func receive(_ input: RetrierEvent<Value>) -> Subscribers.Demand {
         lock.withLock {
             self.demand -= 1
-            let newDemand = subscriber.receive(input)
-            handle(demand: newDemand)
+            let demand = subscriber.receive(input)
+            handle(demand: demand)
         }
         return .none
     }
