@@ -2,6 +2,7 @@ import XCTest
 @testable import SwiftRetrier
 @preconcurrency import Combine
 
+// swiftlint:disable:next type_body_length
 final class JobRetrierTest: XCTestCase {
 
     func test_When_jobSucceeds_Should_completeProperly() {
