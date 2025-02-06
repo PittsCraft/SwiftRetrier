@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 public protocol RetrierEventProtocol {
-    associatedtype Output
+    associatedtype Output: Sendable
 
     var asRetrierEvent: RetrierEvent<Output> { get }
 }
@@ -57,5 +57,9 @@ public extension Publisher where Output: RetrierEventProtocol, Failure == Never 
                 }
             }
             .eraseToAnyPublisher()
+    }
+
+    func handleRetrierEvents(receiveEvent: @escaping @Sendable (Output) -> Void) -> Publishers.HandleEvents<Self> {
+        handleEvents(receiveOutput: receiveEvent)
     }
 }
