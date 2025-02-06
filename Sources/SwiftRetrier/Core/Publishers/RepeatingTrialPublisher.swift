@@ -30,7 +30,8 @@ extension RepeatingTrialPublisher: Publisher {
 /// - condition is still observed to make this repeating subscription complete in case the condition
 /// publisher completes having emitted no value or with false as last value
 /// - demand is simply maintained and relayed to trial subscription when any
-/// - when a trial subscription succeeds (receiving attemptSuccess), a waiting task is started at the end of which a new trial will be started
+/// - when a trial subscription succeeds (receiving attemptSuccess), a waiting task is started at the
+/// end of which a new trial will be started
 @preconcurrency private class RepeatingTrialSubscription<Value: Sendable, S: Subscriber>
 where Never == S.Failure, RetrierEvent<Value> == S.Input {
 
