@@ -164,7 +164,12 @@ private extension TrialSubscription {
         guard !terminated else { return }
         succeeded = true
         let demand = subscriber.receive(.attemptSuccess(value))
-        onAttemptFinished(with: demand)
+        // Anticipate success handling to avoid spanning another task if possible
+        if demand + self.demand - 1 > 0 {
+            successStep()
+        } else {
+            onAttemptFinished(with: demand)
+        }
     }
 
     @MainActor
@@ -180,7 +185,12 @@ private extension TrialSubscription {
         self.attemptFailure = attemptFailure
         self.retryDecision = policy.shouldRetry(on: attemptFailure)
         let demand = subscriber.receive(.attemptFailure(attemptFailure))
-        onAttemptFinished(with: demand)
+        // Anticipate failure handling to avoid spanning another task if possible
+        if case .giveUp = retryDecision, demand + self.demand - 1 > 0 {
+            failureStep()
+        } else {
+            onAttemptFinished(with: demand)
+        }
     }
 
     func onAttemptFinished(with demand: Subscribers.Demand) {

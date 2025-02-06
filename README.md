@@ -167,6 +167,17 @@ public func withMyOwnPolicy() -> Retrier {
 }
 ```
 
+## Backpressure
+
+- most (if not all) usecases imply unlimited demand using `sink(receiveCompletion:)` or `assign(to:)` operators
+- given the asynchronous nature of jobs, there's a very good chance backpressure won't be a problem
+
+Still backpressure is properly managed:
+No event will be sent to the subscriber if there's no demand, and there will be no attempt to execute a job until the 
+subscriber provides a positive demand. 
+
+**In practice, you shouldn't care about that except if you implement your own `Subscriber`.**
+
 ## Migration from v0 or v1
 
 - Now, retriers are cold until consumed *because* the old behavior was mostly useless and complicated - even dangerous
