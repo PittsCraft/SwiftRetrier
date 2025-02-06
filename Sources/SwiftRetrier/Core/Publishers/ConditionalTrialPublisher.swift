@@ -23,6 +23,11 @@ extension ConditionalTrialPublisher: Publisher {
     }
 }
 
+/// - The condition drives whether a  trial subscription should be instantiated or not
+/// - The demand is forwarded to the trial subscription
+/// - This conditional subscription completes as soon as:
+///    - the condition publisher completes with no value published or false as the last value
+///    - the trial subscription completes properly
 @preconcurrency private class ConditionalRetrierSubscription<Value: Sendable, S: Subscriber>
 where Never == S.Failure, RetrierEvent<Value> == S.Input {
 
@@ -85,11 +90,6 @@ private extension ConditionalRetrierSubscription {
             })
     }
 
-    func handle(demand: Subscribers.Demand) {
-        self.demand += demand
-        trialSubscription?.request(demand) // Relay extra demand to active subscription
-    }
-
     func handleTrialConditionsChange() {
         guard !terminated else { return }
         let shouldTry = (condition ?? false)
@@ -109,6 +109,11 @@ private extension ConditionalRetrierSubscription {
             cancel()
             subscriber.receive(completion: .finished)
         }
+    }
+
+    func handle(demand: Subscribers.Demand) {
+        self.demand += demand
+        trialSubscription?.request(demand) // Relay extra demand to active subscription
     }
 
     func cancelTrialSubscription() {

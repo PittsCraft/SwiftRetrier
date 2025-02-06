@@ -25,6 +25,12 @@ extension RepeatingTrialPublisher: Publisher {
     }
 }
 
+/// - trial subscription takes care of the conditional trial
+/// - its event are relayed to the subscriber
+/// - condition is still observed to make this repeating subscription complete in case the condition
+/// publisher completes having emitted no value or with false as last value
+/// - demand is simply maintained and relayed to trial subscription when any
+/// - when a trial subscription succeeds (receiving attemptSuccess), a waiting task is started at the end of which a new trial will be started
 @preconcurrency private class RepeatingTrialSubscription<Value: Sendable, S: Subscriber>
 where Never == S.Failure, RetrierEvent<Value> == S.Input {
 
@@ -39,7 +45,7 @@ where Never == S.Failure, RetrierEvent<Value> == S.Input {
     private var demand: Subscribers.Demand = .none
     private var condition: Bool?
     private var terminated: Bool = false
-    private var task: Task<Void, Never>?
+    private var waitingTask: Task<Void, Never>?
     private let lock = NSRecursiveLock()
 
     var combineIdentifier: CombineIdentifier = .init()
@@ -100,7 +106,7 @@ private extension RepeatingTrialSubscription {
 
     func startTrialIfPossible() {
         guard !terminated else { return }
-        if trialSubscription == nil, task == nil {
+        if trialSubscription == nil, waitingTask == nil {
             trialPublisher
                 .receive(subscriber: self)
         }
@@ -123,7 +129,7 @@ private extension RepeatingTrialSubscription {
 
     func terminate() {
         terminated = true
-        task?.cancel()
+        waitingTask?.cancel()
         cancelTrialSubscription()
     }
 
@@ -134,7 +140,7 @@ private extension RepeatingTrialSubscription {
             }
             trialSubscription?.cancel()
             trialSubscription = nil
-            task = Task { @MainActor in
+            waitingTask = Task { @MainActor in
                 do {
                     try await Task.sleep(nanoseconds: UInt64(repeatDelay * 1_000_000_000))
                 } catch {
@@ -142,7 +148,7 @@ private extension RepeatingTrialSubscription {
                     return
                 }
                 lock.withLock {
-                    task = nil
+                    waitingTask = nil
                     startTrialIfPossible()
                 }
             }
