@@ -23,23 +23,38 @@ public struct ExponentialBackoffRetryPolicy {
         self.previousDelay = previousDelay
     }
 
-    public func exponentiationBySquaring<T: BinaryInteger>(_ base: T, _ multiplier: T, _ exponent: T) -> T {
-        precondition(exponent >= 0)
-        if exponent == 0 {
-            return base
+    private func safeMultiply(_ lhs: UInt, _ rhs: UInt) -> UInt {
+        if UInt.max / rhs < lhs || UInt.max / lhs < rhs {
+            UInt.max
+        } else {
+            lhs * rhs
+        }
+    }
+
+    public func exponentiationBySquaring(base: UInt, multiplier: UInt, exponent: UInt) -> UInt {
+        if exponent == .zero {
+            base
         } else if exponent == 1 {
-            return base * multiplier
+            safeMultiply(base, multiplier)
         } else if exponent.isMultiple(of: 2) {
-            return exponentiationBySquaring(base, multiplier * multiplier, exponent / 2)
+            exponentiationBySquaring(
+                base: base,
+                multiplier: safeMultiply(multiplier, multiplier),
+                exponent: exponent / 2
+            )
         } else { // exponent is odd
-            return exponentiationBySquaring(base * multiplier, multiplier * multiplier, (exponent - 1) / 2)
+            exponentiationBySquaring(
+                base: safeMultiply(base, multiplier),
+                multiplier: safeMultiply(multiplier, multiplier),
+                exponent: (exponent - 1) / 2
+            )
         }
     }
 
     // swiftlint:disable:next line_length
     // See https://stackoverflow.com/questions/24196689/how-to-get-the-power-of-some-integer-in-swift-language/39021464#39021464
-    public func pow<T: BinaryInteger>(_ base: T, _ power: T) -> T {
-        return exponentiationBySquaring(1, base, power)
+    public func pow(_ base: UInt, _ power: UInt) -> UInt {
+        exponentiationBySquaring(base: 1, multiplier: base, exponent: power)
     }
 
     public func noJitterDelay(attemptIndex: UInt) -> TimeInterval {
