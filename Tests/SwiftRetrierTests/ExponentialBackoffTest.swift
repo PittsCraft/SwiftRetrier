@@ -2,7 +2,6 @@ import XCTest
 @testable import SwiftRetrier
 @preconcurrency import Combine
 
-// swiftlint:disable:next type_body_length
 final class ExponentialBackoffTest: XCTestCase {
 
     func test_When_exponentationGoesUp_Then_noOverflow() {
