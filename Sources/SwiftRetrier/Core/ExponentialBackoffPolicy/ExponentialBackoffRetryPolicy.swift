@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ExponentialBackoffRetryPolicy: RetryPolicy {
+public struct ExponentialBackoffRetryPolicy {
 
     public enum Jitter: Sendable {
         case none
@@ -72,6 +72,9 @@ public struct ExponentialBackoffRetryPolicy: RetryPolicy {
             return decorrelatedJitterDelay(attemptIndex: attemptIndex, growthFactor: growthFactor)
         }
     }
+}
+
+extension ExponentialBackoffRetryPolicy: RetryPolicy {
 
     public func retryDelay(for attemptFailure: AttemptFailure) -> TimeInterval {
         min(maxDelay, uncappedDelay(attemptIndex: attemptFailure.index))
